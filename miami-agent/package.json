@@ -1,0 +1,16 @@
+{
+  "name": "senhabaixa-miami-agent",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "@mtcute/convert": "^0.30.0",
+    "@mtcute/node": "^0.30.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

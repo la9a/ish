@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789320123875,
+      "tag": "0000_create_auth_ip_locks",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789321596533,
+      "tag": "0001_create_auth_rate_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789321623555,
+      "tag": "0002_add_atomic_rate_limit_function",
+      "breakpoints": true
+    }
+  ]
+}

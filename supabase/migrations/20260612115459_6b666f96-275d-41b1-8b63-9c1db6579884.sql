@@ -1,0 +1,1 @@
+ALTER TABLE public.clients DROP COLUMN IF EXISTS tg_session; ALTER TABLE public.clients DROP COLUMN IF EXISTS api_id; ALTER TABLE public.clients DROP COLUMN IF EXISTS api_hash;
