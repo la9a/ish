@@ -1,0 +1,19 @@
+Aplique somente os ajustes atuais do ZIP, preservando o restante do projeto e as integrações. Não publique automaticamente.
+
+1. **Conexões:** remova todos os accordions/dropdowns de API ID/API Hash, inclusive em clientes desconectadas. Todo card tem **Editar**. Esse botão abre `ClientEditDialog` com quatro campos sempre visíveis nesta ordem: **Nome, Número, API Hash, API ID**, rótulo e valor abaixo. A edição por rota também usa o mesmo formulário. API de sessão salva fica disponível para consulta; sem sessão salva, o par pode ser atualizado com validação. Cancelar não salva; editar não desconecta, não abre monitoramento nem pede código. Preserve cliente e operador explícitos.
+2. **Nomes no multi:** mostre nomes completos nas contas disponíveis, selecionadas e cartões do monitor. Remova reticências e limites de linha, permitindo quebra de palavras. Use a largura do painel para decidir duas colunas; checkbox/avatar/pin não podem esmagar o texto.
+3. **Gatos proporcionais:** use os novos PNGs `cat-multi-natural.png` e `cat-multi-select-natural.png`. Eles mostram gatos sentados com corpo curto e patas visíveis. Não use os antigos SVGs de corpos alongados e não distorça as imagens.
+4. **Cabos completos:** use `cat-connect-complete-cables.png`. Os dois fios são independentes e contínuos entre os conectores nas patas e dois aparelhos no chão; não existem terminações cortadas no ar.
+5. **Animação visível por elementos:** copie `PageEntrance.tsx` e suas regras CSS. Banner/cards/linhas entram com fade e deslocamento curto em sequência: 320 ms e intervalos de 32 ms, atraso máximo de 180 ms. No modo leve, 280 ms e intervalos de 24 ms. Não troque por um fade único no contêiner. Não remonte páginas nem reinicie formulários, conexões ou monitores. Respeite movimento reduzido; relógio e logs não repetem a entrada.
+
+Copie a versão atual de `BannerArtwork.tsx` e os novos assets. As artes completas em PNG usam `contain` e ficam acima da borda sem cortar patas/objetos. Preserve a arte de falha com **somente o avião amassado**, os três destinos de navegação, o spinner após “Senha:”, Brasília, 12h/24h e o valor canônico de envio.
+
+Mantenha no CSS global:
+
+```css
+#lovable-badge {
+  display: none !important;
+}
+```
+
+Preserve autenticação, limites, isolamento por usuário, segredos, banco e motor da VPS. Não reintroduza Turnstile. Valide os novos comportamentos em celular em pé/deitado e desktop, com nomes longos, clientes conectadas/desconectadas e movimento reduzido. Use serviços simulados para conferir a interface; não envie mensagens para grupos reais de clientes.
