@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clock, Check, Pencil, Lock } from "lucide-react";
@@ -44,7 +44,9 @@ interface Props {
 }
 
 export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
-  const normalized = value && FULL.test(value) ? value : value && /^\d{2}:\d{2}$/.test(value) ? `${value}:00` : "";
+  const scheduleId = useId();
+  const normalized =
+    value && FULL.test(value) ? value : value && /^\d{2}:\d{2}$/.test(value) ? `${value}:00` : "";
   const [draft, setDraft] = useState(normalized || "");
   const [editing, setEditing] = useState(!normalized);
   const [tick, setTick] = useState(0);
@@ -66,7 +68,11 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
   }, [editing, normalized]);
 
   // Aceita HH:MM (completa com :00) ou HH:MM:SS.
-  const finalValue = FULL.test(draft) ? draft : /^\d{2}:\d{2}$/.test(draft) && FULL.test(`${draft}:00`) ? `${draft}:00` : "";
+  const finalValue = FULL.test(draft)
+    ? draft
+    : /^\d{2}:\d{2}$/.test(draft) && FULL.test(`${draft}:00`)
+      ? `${draft}:00`
+      : "";
   const valid = !!finalValue;
 
   function confirm() {
@@ -78,52 +84,92 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-sans text-muted-foreground">
-        <Clock className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden />
-        Horário de envio (Brasília)
-        {running && <Lock className="size-3 ml-auto" strokeWidth={1.5} aria-hidden />}
-      </div>
-
-      {editing && !running ? (
-        <div className="mt-2 flex items-center gap-2">
-          <Input
-            ref={inputRef}
-            value={draft}
-            inputMode="numeric"
-            placeholder="00:00:00"
-            onChange={(e) => setDraft(mask(e.target.value))}
-            onKeyDown={(e) => { if (e.key === "Enter") confirm(); }}
-            className="h-9 w-[9.5rem] rounded-lg font-mono tracking-widest text-center"
-          />
-          <Button size="sm" className="h-9 rounded-lg" disabled={!valid} onClick={confirm}>
-            <Check className="size-3.5 mr-1" strokeWidth={2} aria-hidden /> Confirmar
-          </Button>
+    <section
+      className="mt-4 overflow-hidden rounded-xl border border-border bg-background"
+      aria-labelledby={`${scheduleId}-label`}
+    >
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#c8d8a5]/10 text-[#c8d8a5]">
+          <Clock className="size-4" strokeWidth={1.5} aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 id={`${scheduleId}-label`} className="text-xs font-medium">
+            Horário de envio
+          </h3>
+          <p className="mt-0.5 text-[9px] uppercase tracking-[.1em] text-muted-foreground">
+            Brasília · formato 24h
+          </p>
         </div>
-      ) : (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-9 flex-1 min-w-0 rounded-lg border border-border bg-background px-3 inline-flex items-center font-mono text-sm tracking-widest">
-            {normalized || "--:--:--"}
+        {running && (
+          <span className="inline-flex items-center gap-1 text-[9px] text-muted-foreground">
+            <Lock className="size-3" aria-hidden />
+            Em execução
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-4">
+        {editing && !running ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1">
+              <label htmlFor={scheduleId} className="mb-2 block text-[10px] text-muted-foreground">
+                Hora, minuto e segundo
+              </label>
+              <Input
+                id={scheduleId}
+                ref={inputRef}
+                value={draft}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="00:00:00"
+                onChange={(event) => setDraft(mask(event.target.value))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") confirm();
+                }}
+                className="h-12 min-w-32 rounded-lg border-border bg-card text-center text-xl md:text-xl font-medium tabular-nums tracking-[.14em]"
+                aria-describedby={`${scheduleId}-help`}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="h-12 rounded-lg px-3"
+              disabled={!valid}
+              onClick={confirm}
+            >
+              <Check className="size-4" aria-hidden />
+              <span>Confirmar</span>
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-9 rounded-lg"
-            disabled={running}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil className="size-3.5 mr-1" strokeWidth={1.5} aria-hidden /> Editar
-          </Button>
-        </div>
-      )}
-
-      <div className="mt-1.5 text-[11px] font-mono text-muted-foreground" data-tick={tick}>
-        {!normalized
-          ? "Defina o horário em formato 24h (ex: 20:00:00)."
-          : running
-            ? `Aguardando ${normalized} — ${remainingLabel(brasiliaTargetToday(normalized))}`
-            : remainingLabel(brasiliaTargetToday(normalized))}
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[1.75rem] font-medium leading-none tabular-nums tracking-[.06em]">
+              {normalized || "--:--:--"}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-lg px-3 text-[11px]"
+              disabled={running}
+              onClick={() => setEditing(true)}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              Editar
+            </Button>
+          </div>
+        )}
+        <p
+          id={`${scheduleId}-help`}
+          className="mt-3 border-t border-border pt-3 text-[10px] leading-relaxed tabular-nums text-muted-foreground"
+          data-tick={tick}
+        >
+          {!normalized
+            ? "Defina o horário em formato 24h (ex.: 20:00:00)."
+            : running
+              ? `Aguardando ${normalized} · ${remainingLabel(brasiliaTargetToday(normalized))}`
+              : remainingLabel(brasiliaTargetToday(normalized))}
+        </p>
       </div>
-    </div>
+    </section>
   );
 }

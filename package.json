@@ -11,8 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "node docs/auth-login.test.mjs && node tests/cache-isolation.test.mjs && node miami-agent/src/opening-update.test.mjs",
-    "package": "python3 scripts/package.py"
+    "test": "node docs/auth-login.test.mjs && node tests/cache-isolation.test.mjs && node tests/wizard-recovery.test.mjs && node miami-agent/src/opening-update.test.mjs",
+    "package": "python3 scripts/package.py",
+    "test:ui": "node scripts/visual-smoke.mjs"
   },
   "dependencies": {
     "@mtcute/web": "^0.30.0",

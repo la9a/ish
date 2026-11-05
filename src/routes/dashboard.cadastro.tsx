@@ -9,7 +9,17 @@ import { Label } from "@/components/ui/label";
 import { activeClient, clientsStore, clientData, storage, wizardDraft } from "@/lib/storage";
 import { sendCode, signIn, resendCode, resetPooledClient } from "@/lib/telegram";
 import { mtSendPassword, mtLogin, mtEnsureApp } from "@/lib/myTelegram.functions";
-import { ArrowLeft, Check, ChevronsUpDown, Loader2, Lock, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
+  Loader2,
+  Lock,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +73,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AccessNotification } from "@/components/AccessNotification";
 import { RegistrationStatus } from "@/components/RegistrationStatus";
+import { PageBanner } from "@/components/PageBanner";
 
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 // Include outgoing/incoming 300ms fades, then display for one full second.
@@ -79,6 +90,28 @@ async function withStatusMinimum<T>(request: Promise<T>): Promise<T> {
 // creds:  fallback manual — usuário cola API ID/Hash quando a automação falha
 // code:   código final do MTProto (signIn)
 type Step = "title" | "mtCode" | "creds" | "code";
+
+// A pending Telegram login belongs to one client id. A restored draft may
+// reuse it only when its locally stored credentials match the same account.
+function recoverWizardClientId(
+  draft: { clientId?: string; apiId: string; apiHash: string },
+  readCreds: typeof clientData.getCreds,
+): string | null {
+  // API credentials identify an app and may be shared by multiple Telegram
+  // accounts. An arbitrary active selection cannot identify a pending login.
+  const candidateId = draft.clientId;
+  if (!candidateId || !draft.apiId.trim() || !draft.apiHash.trim()) return null;
+  try {
+    const creds = readCreds(candidateId);
+    return creds &&
+      String(creds.apiId) === draft.apiId.trim() &&
+      creds.apiHash.trim().toLowerCase() === draft.apiHash.trim().toLowerCase()
+      ? candidateId
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const ID_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -162,6 +195,8 @@ function NewClientWizard() {
   }, [router, backTo]);
 
   const [step, setStep] = useState<Step>("title");
+  const [draftReady, setDraftReady] = useState(false);
+  const draftRestoredRef = useRef(false);
   const [flowModal, setFlowModal] = useState<"confirm" | "sending" | "failure" | null>(null);
   const lastFlowModal = useRef<"confirm" | "sending" | "failure">("confirm");
   if (flowModal) lastFlowModal.current = flowModal;
@@ -324,16 +359,36 @@ function NewClientWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reconnectMode, phone, apiId, apiHash]);
 
-  // Restaura rascunho do wizard (somente quando NÃO é edição e não veio com id)
+  // Restore once before allowing writes. In StrictMode the initial effects
+  // replay with their initial render's values; writing then would replace a
+  // saved draft with the empty first step before it can be restored.
   useEffect(() => {
-    if (editingId) return;
+    if (draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    if (editingId) {
+      setDraftReady(true);
+      return;
+    }
     const d = wizardDraft.get();
-    if (!d) return;
+    if (!d) {
+      setDraftReady(true);
+      return;
+    }
     // Rascunho antigo pode ter "phone" salvo — tratar como "title" no fluxo novo.
     // Se o rascunho está em "mtCode" mas perdemos a mtSession (recarregou a
     // página), a única saída segura é voltar pra "title" e reiniciar o envio.
     const rawStep = d.step as string;
-    if (rawStep === "phone") setStep("title");
+    const recoveredId = rawStep === "code" ? recoverWizardClientId(d, clientData.getCreds) : null;
+    if (recoveredId) {
+      setClientId(recoveredId);
+      activeClient.set(recoveredId);
+    }
+    if (rawStep === "code" && !recoveredId) {
+      setStep("creds");
+      setCredsInfo(
+        "A conexão anterior não pôde ser retomada. Confira as credenciais e solicite um novo código para continuar.",
+      );
+    } else if (rawStep === "phone") setStep("title");
     else if (rawStep === "mtCode") {
       // A sessão mt expira ao recarregar — cai no fallback manual em vez
       // de voltar pra primeira etapa, preservando o progresso do usuário.
@@ -352,7 +407,7 @@ function NewClientWizard() {
     setDdi(d.ddi || "+55");
     setPhone(d.phone);
     setPhoneCodeHash(d.phoneCodeHash);
-    if (d.credsInfo) setCredsInfo(d.credsInfo);
+    if (d.credsInfo && !(rawStep === "code" && !recoveredId)) setCredsInfo(d.credsInfo);
     if (d.codeSentAt) setCodeSentAt(d.codeSentAt);
     // Ao recarregar na etapa "code", o phoneCodeHash restaurado não bate
     // mais com o pool mtcute recém-criado, e o Telegram devolve
@@ -361,6 +416,7 @@ function NewClientWizard() {
     // mostrar erro ao usuário.
     if (
       rawStep === "code" &&
+      recoveredId &&
       d.phoneCodeHash &&
       d.codeSentAt &&
       Date.now() - d.codeSentAt < 120_000
@@ -378,13 +434,15 @@ function NewClientWizard() {
         }
       })();
     }
+    setDraftReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Salva rascunho a cada alteração relevante (apenas no modo de criação)
   useEffect(() => {
-    if (editingId || leavingRef.current) return;
+    if (!draftReady || editingId || leavingRef.current) return;
     wizardDraft.set({
+      clientId: clientId ?? undefined,
       step,
       title,
       schedRas,
@@ -401,7 +459,9 @@ function NewClientWizard() {
       savedAt: Date.now(),
     });
   }, [
+    draftReady,
     editingId,
+    clientId,
     step,
     title,
     schedRas,
@@ -843,7 +903,15 @@ function NewClientWizard() {
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (pendingRef.current || !clientId) return;
+    if (pendingRef.current) return;
+    if (!clientId) {
+      setError(
+        "A conexão precisa ser iniciada novamente. Confira as credenciais e solicite um novo código.",
+      );
+      setStep("creds");
+      return;
+    }
+    activeClient.set(clientId);
     pendingRef.current = true;
     setInvalidNotice(false);
     setError(null);
@@ -973,7 +1041,10 @@ function NewClientWizard() {
       setError("Informe o nome do cliente.");
       return;
     }
-    if (!editingId) return;
+    if (!editingId || !clientsStore.get(editingId)) {
+      setError("Esta cliente não foi encontrada. Volte à lista e abra o cadastro novamente.");
+      return;
+    }
     clientsStore.update(editingId, {
       title: title.trim(),
       scheduleRas: schedRas.trim() || null,
@@ -988,72 +1059,126 @@ function NewClientWizard() {
           : null,
       preferredGroup: hasPreferred ? preferredGroup.trim() || null : null,
     });
-    setInfo("Alterações salvas.");
+    setInfo("Dados atualizados.");
   }
+
+  const currentTitle = isEditMode
+    ? "Dados da cliente"
+    : step === "title"
+      ? "Quem vamos cadastrar?"
+      : step === "creds"
+        ? "Credenciais do Telegram"
+        : step === "mtCode"
+          ? "Autorize a conexão"
+          : need2fa
+            ? "Senha de duas etapas"
+            : "Confirme a conta";
+  const currentDescription = isEditMode
+    ? "Altere o nome usado para identificar esta cliente no painel."
+    : step === "title"
+      ? "Informe o nome e o telefone da conta que será conectada."
+      : step === "creds"
+        ? "Cole o API ID e o API Hash da conta para continuar com o cadastro manual."
+        : step === "mtCode"
+          ? "Abra o Telegram da cliente e cole o código de autorização recebido."
+          : need2fa
+            ? "Esta conta também pede a senha de nuvem do Telegram."
+            : "Digite o novo código recebido no Telegram para concluir o cadastro.";
+  const steps = [
+    { title: "Dados da cliente", description: "Nome e telefone do Telegram.", icon: UserRound },
+    { title: "Autorização", description: "Permissão para conectar a conta.", icon: ShieldCheck },
+    { title: "Confirmação", description: "Último código e conta conectada.", icon: MessageCircle },
+  ];
+  const tip = isEditMode
+    ? {
+        title: "Sobre os dados da conta",
+        text: "O telefone e as credenciais pertencem à conta conectada. Para usar outra conta do Telegram, faça um novo cadastro.",
+      }
+    : step === "title"
+      ? {
+          title: "Deixe o Telegram por perto",
+          text: "Você vai precisar acessar o Telegram da cliente para receber os códigos nas próximas etapas.",
+        }
+      : step === "creds"
+        ? {
+            title: "Onde encontro as credenciais?",
+            text: "Acesse my.telegram.org/apps com o telefone desta cliente. Copie os dois campos exatamente como aparecem lá.",
+          }
+        : step === "mtCode"
+          ? {
+              title: "Este é o primeiro código",
+              text: "Ele autoriza a coleta das credenciais da conta. Depois, o Telegram envia outro código para concluir a conexão.",
+            }
+          : {
+              title: "Falta só confirmar",
+              text: "Use o código mais recente recebido no Telegram. Se ele expirou, peça um novo pelo botão de reenvio.",
+            };
 
   return (
     <main className="sb-page">
-      <div className="mx-auto max-w-xl py-2 md:py-4">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={goBackStep}
-          className="site-control-glass gap-1.5 h-9 rounded-xl mb-4"
+          disabled={loading}
+          className="gap-2 px-0 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" /> Voltar
+          <ArrowLeft className="size-4" /> {editingId ? "Voltar às conexões" : "Voltar ao painel"}
         </Button>
+        <span className="text-xs text-muted-foreground">
+          {isEditMode ? "Editar cadastro" : `Etapa ${stepIdx + 1} de 3`}
+        </span>
+      </div>
 
-        <header className="mb-6">
-          <div>
-            <p className="sb-eyebrow mb-3">UM NOVO ATENDIMENTO COMEÇA AQUI</p>
-            <h1>
-              <span>
-                {isEditMode
-                  ? "Editar cliente."
-                  : reconnectMode
-                    ? "Reconectar cliente."
-                    : editingId
-                      ? "Conectar cliente."
-                      : "Nova cliente."}
-              </span>
-            </h1>
-            {reconnectMode && !isEditMode && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Enviamos um código de acesso para o seu Telegram. Digite o código abaixo para entrar
-                novamente.
-              </p>
-            )}
-            {!isEditMode && (
-              <>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Conecte a conta do Telegram para organizar grupos e preparar os rascunhos da sua
-                  cliente.
-                </p>
-                <ol aria-label="Etapas do cadastro" className="mt-7 grid grid-cols-3 gap-3">
-                  {["Dados da cliente", "Autorização", "Confirmação"].map((label, i) => (
-                    <li
-                      key={label}
-                      aria-current={i === stepIdx ? "step" : undefined}
-                      className={`border-t-2 pt-3 ${i <= stepIdx ? "border-foreground" : "border-border"}`}
-                    >
-                      <span
-                        className={`flex items-center gap-2 text-[10px] sm:text-[11px] ${i <= stepIdx ? "text-foreground" : "text-muted-foreground"}`}
-                      >
-                        <span className="font-medium tabular-nums">0{i + 1}</span>
-                        {label}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </>
+      <PageBanner
+        eyebrow={isEditMode ? "CADASTRO" : reconnectMode ? "CONEXÃO DA CONTA" : "NOVA CLIENTE"}
+        title={
+          isEditMode
+            ? "Cadastro da cliente"
+            : reconnectMode
+              ? "Reconectar Telegram"
+              : "Nova cliente"
+        }
+        description={
+          isEditMode
+            ? "Confira e atualize os dados desta cliente."
+            : "Preencha os dados, autorize a conexão e confirme a conta pelo Telegram."
+        }
+        image="/art/cat-register.svg"
+        tone="peach"
+        compact
+      />
+
+      <div className="sb-wizard-grid !mt-6">
+        <section
+          className="sb-wizard-main sb-panel min-w-0 p-5 sm:p-7"
+          aria-busy={loading}
+          aria-labelledby="wizard-form-title"
+        >
+          <div className="mb-6 border-b border-border pb-5">
+            <p className="sb-eyebrow mb-3">
+              {isEditMode ? "EDITAR CLIENTE" : `PASSO 0${stepIdx + 1}`}
+            </p>
+            <h2 id="wizard-form-title" className="text-2xl font-medium tracking-tight">
+              {currentTitle}
+            </h2>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+              {currentDescription}
+            </p>
+            {!isEditMode && step !== "title" && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+                <span className="flex items-center gap-2">
+                  <UserRound className="size-3.5" />
+                  {title.trim() || "Cliente"}
+                </span>
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="size-3.5" />
+                  {formatDisplayPhone(buildFullPhone())}
+                </span>
+              </div>
             )}
           </div>
-        </header>
-
-        <div
-          className="site-control-glass overflow-hidden rounded-xl border border-border p-5 sm:p-7"
-          aria-busy={loading}
-        >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={isEditMode ? "edit" : step}
@@ -1065,8 +1190,11 @@ function NewClientWizard() {
               {isEditMode ? (
                 <form onSubmit={saveEdit} className="space-y-4">
                   <div>
-                    <Label className="text-xs">Nome da cliente</Label>
+                    <Label htmlFor="client-title" className="text-xs">
+                      Nome da cliente
+                    </Label>
                     <Input
+                      id="client-title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex.: Maria Silva"
@@ -1074,8 +1202,8 @@ function NewClientWizard() {
                     />
                   </div>
 
-                  <div className="space-y-3 pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">Credenciais do Telegram</p>
+                  <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+                    <p className="text-sm font-medium sm:col-span-2">Conta do Telegram</p>
                     <div>
                       <Label className="text-xs flex items-center gap-1.5">
                         Telefone <Lock className="size-3 text-muted-foreground" />
@@ -1103,13 +1231,14 @@ function NewClientWizard() {
                         API Hash <Lock className="size-3 text-muted-foreground" />
                       </Label>
                       <Input
+                        type="password"
                         value={apiHash}
                         disabled
                         readOnly
                         className="bg-muted/40 cursor-not-allowed"
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs leading-relaxed text-muted-foreground sm:col-span-2">
                       As credenciais não podem ser alteradas. Para usar outras, remova o cliente e
                       cadastre novamente.
                     </p>
@@ -1132,7 +1261,7 @@ function NewClientWizard() {
                           setInfo(null);
                           setStep("title");
                         }}
-                        className="site-control-glass inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs text-readable-muted hover:text-foreground"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <ArrowLeft className="size-3.5" /> Voltar etapa
                       </Button>
@@ -1141,8 +1270,11 @@ function NewClientWizard() {
                   {step === "title" && (
                     <form onSubmit={submitTitle} className="space-y-4">
                       <div>
-                        <Label className="text-xs">Nome da cliente</Label>
+                        <Label htmlFor="client-title" className="text-xs">
+                          Nome da cliente
+                        </Label>
                         <Input
+                          id="client-title"
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
                           placeholder="Ex.: Maria Silva"
@@ -1151,7 +1283,9 @@ function NewClientWizard() {
                       </div>
 
                       <div>
-                        <Label className="text-xs">Telefone</Label>
+                        <Label htmlFor="client-phone" className="text-xs">
+                          Telefone
+                        </Label>
                         <div className="flex gap-2">
                           {(() => {
                             const selected = findCountryByExactDial(ddi);
@@ -1164,12 +1298,10 @@ function NewClientWizard() {
                                     role="combobox"
                                     aria-label="País"
                                     aria-expanded={countryOpen}
-                                    className="site-control-glass flex h-10 min-w-0 w-[45%] max-w-[220px] shrink-0 items-center justify-between gap-2 rounded-xl border border-input px-3 text-sm focus:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring"
+                                    className="flex h-11 w-[108px] shrink-0 items-center justify-between gap-2 rounded-lg border border-input px-3 text-sm focus-visible:ring-1 focus-visible:ring-ring"
                                   >
-                                    <span className="truncate">
-                                      {selected
-                                        ? `(${selected.name}) +${selected.dial}`
-                                        : ddi || "Selecione…"}
+                                    <span className="truncate" title={selected?.name}>
+                                      {selected ? `+${selected.dial}` : ddi || "País"}
                                     </span>
                                     <ChevronsUpDown className="size-4 opacity-60 shrink-0" />
                                   </Button>
@@ -1264,6 +1396,7 @@ function NewClientWizard() {
                             );
                           })()}
                           <Input
+                            id="client-phone"
                             value={phone}
                             onChange={(e) => {
                               const raw = e.target.value;
@@ -1357,8 +1490,11 @@ function NewClientWizard() {
                   {step === "mtCode" && (
                     <form onSubmit={submitMtCode} className="space-y-4">
                       <div>
-                        <Label className="text-xs">Código de autorização</Label>
+                        <Label htmlFor="telegram-authorization-code" className="text-xs">
+                          Código de autorização
+                        </Label>
                         <Input
+                          id="telegram-authorization-code"
                           value={mtCode}
                           onChange={(e) => setMtCode(e.target.value.replace(/\s/g, ""))}
                           placeholder="Ex: Ab1CdEfghIJ"
@@ -1366,11 +1502,6 @@ function NewClientWizard() {
                           required
                           autoFocus
                         />
-                        {error && (
-                          <p key={error} className="mt-2 text-xs text-danger animate-fade-in">
-                            {error}
-                          </p>
-                        )}
                       </div>
                       <Button type="submit" className="w-full" disabled={loading || !mtCode.trim()}>
                         {loading ? (
@@ -1396,8 +1527,11 @@ function NewClientWizard() {
                   {step === "code" && (
                     <form onSubmit={submitCode} className="space-y-4">
                       <div>
-                        <Label className="text-xs">Código de confirmação</Label>
+                        <Label htmlFor="telegram-confirmation-code" className="text-xs">
+                          Código de confirmação
+                        </Label>
                         <Input
+                          id="telegram-confirmation-code"
                           key={`code-${codeSentAt || clientId || "new"}`}
                           name={`otp-${(codeSentAt || Date.now()).toString(36)}`}
                           value={code}
@@ -1411,16 +1545,14 @@ function NewClientWizard() {
                           required
                           autoFocus
                         />
-                        {error && error !== "Nenhum código foi inserido" && (
-                          <p key={error} className="mt-2 text-xs text-danger animate-fade-in">
-                            {error}
-                          </p>
-                        )}
                       </div>
                       {need2fa && (
                         <div>
-                          <Label className="text-xs">SENHA 2FA</Label>
+                          <Label htmlFor="telegram-password" className="text-xs">
+                            Senha de duas etapas
+                          </Label>
                           <Input
+                            id="telegram-password"
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -1434,7 +1566,7 @@ function NewClientWizard() {
                             <Loader2 className="size-4 animate-spin" /> Verificando…
                           </>
                         ) : (
-                          "Continuar"
+                          "Concluir cadastro"
                         )}
                       </Button>
                       <Button
@@ -1451,28 +1583,103 @@ function NewClientWizard() {
                 </>
               )}
 
-              {error &&
-                step !== "mtCode" &&
-                step !== "code" &&
-                error !== "Nenhum código foi inserido" && (
-                  <p
-                    key={error}
-                    className="mt-4 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger font-mono animate-fade-in"
-                  >
-                    {error}
-                  </p>
-                )}
-              {info &&
-                step !== "mtCode" &&
-                step !== "code" &&
-                (!error || error === "Nenhum código foi inserido") && (
-                  <p className="mt-4 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary font-mono">
-                    {info}
-                  </p>
-                )}
+              {error && error !== "Nenhum código foi inserido" && (
+                <p
+                  key={error}
+                  role="alert"
+                  className="mt-5 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm leading-relaxed text-danger"
+                >
+                  {error}
+                </p>
+              )}
+              {info && !error && (
+                <p
+                  role="status"
+                  className="mt-5 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-foreground"
+                >
+                  <Check className="mt-0.5 size-4 shrink-0" />
+                  {info}
+                </p>
+              )}
             </motion.div>
           </AnimatePresence>
-        </div>
+        </section>
+
+        <aside className="sb-wizard-aside" aria-label="Ajuda com o cadastro">
+          {!isEditMode && (
+            <div className="sb-panel p-5 sm:p-6">
+              <h2 className="mb-5 text-sm font-medium">Seu cadastro, passo a passo</h2>
+              <ol className="sb-step-list" aria-label="Etapas do cadastro">
+                {steps.map(({ title: label, description, icon: Icon }, i) => (
+                  <li
+                    key={label}
+                    aria-current={i === stepIdx ? "step" : undefined}
+                    className="flex items-start gap-3"
+                  >
+                    <span
+                      className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-full border",
+                        i === stepIdx
+                          ? "border-foreground bg-foreground text-background"
+                          : i < stepIdx
+                            ? "border-foreground/30 text-foreground"
+                            : "border-border text-muted-foreground",
+                      )}
+                    >
+                      {i < stepIdx ? <Check className="size-4" /> : <Icon className="size-4" />}
+                    </span>
+                    <span className="pt-0.5">
+                      <span
+                        className={cn(
+                          "block text-sm font-medium",
+                          i > stepIdx && "text-muted-foreground",
+                        )}
+                      >
+                        {label}
+                      </span>
+                      {i === stepIdx && (
+                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                          {description}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {isEditMode && (
+            <div className="sb-panel p-5 sm:p-6">
+              <div className="mb-4 flex items-center gap-2 text-sm font-medium">
+                <UserRound className="size-4" />{" "}
+                {isEditMode ? "Conta conectada" : "Resumo da cliente"}
+              </div>
+              <p className="break-words text-lg font-medium">{title.trim() || "Nome da cliente"}</p>
+              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="size-3.5 shrink-0" />{" "}
+                {phone.trim()
+                  ? formatDisplayPhone(buildFullPhone())
+                  : "Telefone ainda não informado"}
+              </p>
+              <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
+                {isEditMode
+                  ? "As alterações se aplicam a esta cliente."
+                  : "A cliente aparece na sua lista depois que a conexão do Telegram for confirmada."}
+              </p>
+            </div>
+          )}
+
+          <div className="relative overflow-hidden rounded-xl bg-[#d8edb1] p-5 pr-24 text-[#192114] sm:p-6 sm:pr-24">
+            <img
+              src="/art/cat-note.svg"
+              alt=""
+              className="pointer-events-none absolute -right-8 bottom-0 h-28 w-32 object-cover"
+            />
+            <h3 className="relative text-sm font-semibold">{tip.title}</h3>
+            <p className="relative mt-2 text-xs leading-relaxed text-[#34432a]">{tip.text}</p>
+          </div>
+        </aside>
       </div>
       <AccessNotification open={invalidNotice} title="Código inválido" />
       <Dialog

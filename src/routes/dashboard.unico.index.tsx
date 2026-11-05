@@ -12,6 +12,14 @@ import {
   CircleAlert,
 } from "lucide-react";
 import { AdminLayout } from "./admin";
+import { PageBanner } from "@/components/PageBanner";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/dashboard/unico/")({
   head: () => ({
@@ -73,25 +81,22 @@ function ClientsListPage() {
 
   return (
     <main className="sb-page">
-      <div className="sb-page-header flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <p className="sb-eyebrow">Organização que acompanha você</p>
-          <h1 className="mt-2">
-            Minhas clientes<span className="text-muted-foreground">.</span>
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Cada atendimento, no seu lugar. Tudo sob seu controle.
-          </p>
-        </div>
+      <PageBanner
+        eyebrow="CLIENTES"
+        title="Minhas clientes"
+        description="Encontre uma cliente, confira a conta e abra o atendimento."
+        image="/art/cat-note.svg"
+        tone="lime"
+        compact
+      >
         <button
           type="button"
           className="sb-button"
           onClick={() => navigate({ to: "/dashboard/cadastro" })}
         >
-          <Plus className="size-4" aria-hidden />
-          Nova cliente
+          <Plus className="size-4" aria-hidden /> Nova cliente
         </button>
-      </div>
+      </PageBanner>
       <div className="mt-8 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-card py-5">
         {[
           { label: "Cadastradas", value: clients.length },
@@ -125,18 +130,19 @@ function ClientsListPage() {
               className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-xs placeholder:text-muted-foreground"
             />
           </div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            Status
-            <select
-              className="h-10 rounded-lg border border-border bg-background px-3 text-xs text-foreground"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as typeof status)}
-            >
-              <option value="all">Todas</option>
-              <option value="connected">Conectadas</option>
-              <option value="pending">A reconectar</option>
-            </select>
-          </label>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span id="client-status-label">Status</span>
+            <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+              <SelectTrigger className="h-10 min-w-40" aria-labelledby="client-status-label">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="all">Todas as clientes</SelectItem>
+                <SelectItem value="connected">Conectadas</SelectItem>
+                <SelectItem value="pending">A reconectar</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {filtered.length ? (
           <div>
@@ -219,14 +225,12 @@ function ClientsListPage() {
           <div className="px-6 py-16 text-center">
             <Users className="mx-auto size-8 text-muted-foreground" strokeWidth={1.3} aria-hidden />
             <h2 className="mt-5 text-lg font-medium">
-              {clients.length
-                ? "Nenhuma cliente encontrada"
-                : "Seu próximo atendimento começa aqui"}
+              {clients.length ? "Nenhuma cliente encontrada" : "Nenhuma cliente cadastrada"}
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {clients.length
                 ? "Tente outro nome ou altere o filtro de status."
-                : "Adicione sua primeira cliente, conecte a conta do Telegram e prepare os rascunhos."}
+                : "Cadastre uma cliente para conectar a conta do Telegram e preparar o envio."}
             </p>
             <button
               type="button"

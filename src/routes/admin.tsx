@@ -211,12 +211,12 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
         </nav>
         <div className="mx-5 mt-auto mb-6 rounded-xl border border-border p-4">
           <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            Tudo no seu ritmo
+            CADASTRO
           </span>
           <p className="mt-2 text-[13px] leading-relaxed text-foreground/85">
-            Menos abas.
+            Nova cliente
             <br />
-            Mais organização.
+            Conecte uma conta Telegram.
           </p>
           <Link
             to="/dashboard/cadastro"
@@ -297,7 +297,7 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
             </span>
           </div>
           <span className="hidden text-[11px] text-muted-foreground sm:block">
-            Organize. Prepare. Acompanhe.
+            Clientes e monitoramento
           </span>
         </header>
         <div id="main-content" tabIndex={-1}>

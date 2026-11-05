@@ -1,3 +1,4 @@
+import { PageBanner } from "@/components/PageBanner";
 import { AdminLayout } from "./admin";
 import { createFileRoute, Outlet, useNavigate, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,29 +30,12 @@ import { appAuth } from "@/lib/appAuth";
 import { AddGroupModal } from "@/components/AddGroupModal";
 import { EditGroupModal } from "@/components/EditGroupModal";
 import { MonitorLog } from "@/components/MonitorLog";
-import {
-  Pause,
-  Play,
-  Square,
-  AlertTriangle,
-  ArrowLeft,
-  Settings as SettingsIcon,
-  Activity,
-} from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Play, Square, ArrowLeft, Settings as SettingsIcon, Activity } from "lucide-react";
 import { HelpHint } from "@/components/HelpHint";
 import { MethodHelp } from "@/components/MethodHelp";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Reveal } from "@/components/motion/Reveal";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { playSound } from "@/lib/beep";
-import { Logo } from "@/components/Logo";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { MonitorSettingsPanel } from "@/components/MonitorSettingsPanel";
 import { GroupSummaryCard } from "@/components/GroupSummaryCard";
@@ -337,52 +321,61 @@ export function Dashboard() {
     <AdminLayout
       content={
         <main className="sb-page">
-          <div className="relative z-10 mx-auto max-w-6xl">
-            <div className="sb-page-header">
-              <div>
-                <p className="sb-eyebrow">UMA CLIENTE, TODA A SUA ATENÇÃO</p>
-                <h1 className="mt-2">
-                  Atendimento<span className="text-muted-foreground">.</span>
-                </h1>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Prepare o rascunho e acompanhe os envios de {client?.title ?? "sua cliente"}.
-                </p>
-              </div>
-              <span
-                role="status"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] text-muted-foreground"
+          <div className="mx-auto max-w-7xl">
+            <PageBanner
+              image="/art/cat-monitor.svg"
+              compact
+              eyebrow="ATENDIMENTO INDIVIDUAL"
+              title="Monitoramento"
+              description="Gerencie os grupos, revise os rascunhos e acompanhe cada evento de envio."
+              tone="peach"
+            >
+              <button
+                type="button"
+                className="sb-button-secondary"
+                onClick={() => navigate({ to: "/dashboard/unico" })}
               >
-                <span
-                  className={`size-1.5 rounded-full ${running ? "bg-success" : "bg-muted-foreground"}`}
-                  aria-hidden
-                />
-                {running ? "Monitoramento em andamento" : "Monitoramento pausado"}
-              </span>
-            </div>
+                <ArrowLeft className="size-4" aria-hidden />
+                Minhas clientes
+              </button>
+            </PageBanner>
 
-            {/* Top bar */}
-            <Reveal className="mb-8 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate({ to: "/dashboard/unico" })}
-                  className="site-control-glass gap-1.5 h-9 rounded-xl"
-                >
-                  <ArrowLeft className="size-4" /> Voltar
-                </Button>
+            <section className="sb-monitor-strip" aria-label="Controles do monitoramento">
+              <div className="flex min-w-0 flex-wrap items-center gap-5">
+                <div className="flex items-center gap-2.5">
+                  <span className={`sb-live-chip ${running ? "is-live" : ""}`} role="status">
+                    <span aria-hidden />
+                    {running ? "Em execução" : "Parado"}
+                  </span>
+                </div>
+                <div className="text-[11px]">
+                  <span className="block text-muted-foreground">Grupos ativos</span>
+                  <span className="sb-number mt-1 block">
+                    {groups.filter((g) => g.active).length}
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      / {groups.length}
+                    </span>
+                  </span>
+                </div>
+                <div className="text-[11px]">
+                  <span className="block text-muted-foreground">Conexão</span>
+                  <span role="status" className="mt-1 block text-xs font-medium">
+                    {miamiConnecting ? "Conectando…" : miamiReady ? "Pronta" : "Aguardando"}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <div className="flex flex-wrap items-center gap-2">
                 <BrasiliaClock />
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setPanelOpen(true)}
-                  className="site-control-glass gap-1.5 h-9 rounded-xl shadow-none"
+                  className="h-10 rounded-lg gap-2"
                   aria-label="Abrir opções de envio"
                 >
-                  <SettingsIcon className="size-4" />
-                  <span className="hidden sm:inline">Opções de envio</span>
+                  <SettingsIcon className="size-4" aria-hidden />
+                  <span className="hidden xl:inline">Opções de envio</span>
                 </Button>
                 {running ? (
                   <Button
@@ -428,158 +421,196 @@ export function Dashboard() {
                   </Button>
                 )}
               </div>
-            </Reveal>
+            </section>
 
-            <Reveal delay={0.05} className="space-y-4 mb-6">
-              <MonitorClientCard
-                title={client?.title ?? "Cliente"}
-                censorTitle={settings.censorClientTitle}
-                editing={editingGroups}
-                disabled={running}
-                onEditingChange={() => setEditingGroups((v) => !v)}
-                clientId={client?.id}
-                groups={groups.filter((g) => g.active).map((g) => ({ id: g.id, name: g.name }))}
-              >
-                {/* Grupos */}
-                <div className="mb-1 text-xs font-sans text-readable-muted">
-                  {groups.length > 1 ? "Grupos" : "Grupo"}
-                </div>
-                <div className="space-y-2">
-                  {groups.length === 0 ? (
-                    <button
-                      type="button"
-                      disabled={running}
-                      onClick={() => setModalOpen(true)}
-                      className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <div className="text-xs text-muted-foreground">
-                        Nenhum grupo ainda.{" "}
-                        <span className="text-foreground">Clique para adicionar.</span>
-                      </div>
-                    </button>
-                  ) : editingGroups ? (
-                    <>
-                      {groups.map((g) => (
-                        <GroupSummaryCard
-                          key={g.id}
-                          group={g}
-                          showIcon={settings.showGroupIcons}
-                          censorPhoto={settings.censorGroupPhoto}
-                          censorName={settings.censorGroupName}
-                          censorDraft={settings.censorDraft}
-                          editing
-                          disabled={running}
-                          onToggle={() => toggleActive(g)}
-                          onEdit={() => setEditing(g)}
-                          onRemove={() => remove(g)}
-                        />
-                      ))}
-                      <Button
-                        variant="outline"
-                        onClick={() => setModalOpen(true)}
-                        disabled={running}
-                        className="site-control-glass rounded-xl h-9 w-full"
-                      >
-                        + Adicionar grupo
-                      </Button>
-                    </>
-                  ) : groups.filter((g) => g.active).length === 0 ? (
-                    <button
-                      type="button"
-                      disabled={running}
-                      onClick={() => setEditingGroups(true)}
-                      className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <div className="text-xs text-muted-foreground">
-                        Nenhum grupo ativo.{" "}
-                        <span className="text-foreground">Clique em editar para ativar.</span>
-                      </div>
-                    </button>
-                  ) : (
-                    groups
-                      .filter((g) => g.active)
-                      .map((g) => {
-                        return (
-                          <GroupSummaryCard
-                            key={g.id}
-                            group={g}
-                            showIcon={settings.showGroupIcons}
-                            censorPhoto={settings.censorGroupPhoto}
-                            censorName={settings.censorGroupName}
-                            censorDraft={settings.censorDraft}
-                          />
-                        );
-                      })
-                  )}
-                </div>
-
-                {/* Método */}
-                <div className="mt-4 pt-4 hairline-t">
-                  <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
-                    Método
-                    <HelpHint side="top" iconClassName="size-3">
-                      <MethodHelp />
-                    </HelpHint>
+            <div className="sb-workspace-grid">
+              <section className="sb-panel min-w-0" aria-labelledby="single-client-heading">
+                <div className="sb-section-head">
+                  <div>
+                    <p className="sb-eyebrow">PREPARAÇÃO</p>
+                    <h2 id="single-client-heading" className="mt-1 text-base font-medium">
+                      Cliente e rascunhos
+                    </h2>
                   </div>
-                  <Select
-                    value={client?.method ?? "abertura"}
-                    onValueChange={(v) => {
-                      if (!client) return;
-                      if (methodReloadRef.current) window.clearTimeout(methodReloadRef.current);
-                      setVerifying(true);
-                      clientsStore.update(client.id, {
-                        method: v as "abertura" | "mensagem" | "abertura2",
-                      });
-                      setClient(clientsStore.get(client.id) ?? null);
-                      methodReloadRef.current = window.setTimeout(() => setVerifying(false), 900);
-                    }}
-                    disabled={running}
-                  >
-                    <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
-                      {client?.method === "mensagem"
-                        ? "Grupo aberto"
-                        : client?.method === "abertura2"
-                          ? "Grupo aberto 2"
-                          : "Grupo fechado"}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="abertura">Grupo fechado</SelectItem>
-                      <SelectItem value="mensagem">Grupo aberto</SelectItem>
-                      <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {client?.method === "abertura2" && (
-                    <ScheduleTimeCard
-                      clientId={client.id}
-                      value={client.scheduleEnv}
-                      running={running}
-                      onSaved={() => setClient(clientsStore.get(client.id) ?? null)}
-                    />
-                  )}
+                  <span className="rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground">
+                    01 cliente
+                  </span>
                 </div>
-              </MonitorClientCard>
-            </Reveal>
+                <div className="p-3 sm:p-5">
+                  <MonitorClientCard
+                    title={client?.title ?? "Cliente"}
+                    censorTitle={settings.censorClientTitle}
+                    editing={editingGroups}
+                    disabled={running}
+                    onEditingChange={() => setEditingGroups((v) => !v)}
+                    clientId={client?.id}
+                    groups={groups.filter((g) => g.active).map((g) => ({ id: g.id, name: g.name }))}
+                  >
+                    {/* Grupos */}
+                    <div className="mb-1 text-xs font-sans text-readable-muted">
+                      {groups.length > 1 ? "Grupos" : "Grupo"}
+                    </div>
+                    <div className="space-y-2">
+                      {groups.length === 0 ? (
+                        <button
+                          type="button"
+                          disabled={running}
+                          onClick={() => setModalOpen(true)}
+                          className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          <div className="text-xs text-muted-foreground">
+                            Nenhum grupo ainda.{" "}
+                            <span className="text-foreground">Clique para adicionar.</span>
+                          </div>
+                        </button>
+                      ) : editingGroups ? (
+                        <>
+                          {groups.map((g) => (
+                            <GroupSummaryCard
+                              key={g.id}
+                              group={g}
+                              showIcon={settings.showGroupIcons}
+                              censorPhoto={settings.censorGroupPhoto}
+                              censorName={settings.censorGroupName}
+                              censorDraft={settings.censorDraft}
+                              editing
+                              disabled={running}
+                              onToggle={() => toggleActive(g)}
+                              onEdit={() => setEditing(g)}
+                              onRemove={() => remove(g)}
+                            />
+                          ))}
+                          <Button
+                            variant="outline"
+                            onClick={() => setModalOpen(true)}
+                            disabled={running}
+                            className="site-control-glass rounded-xl h-9 w-full"
+                          >
+                            + Adicionar grupo
+                          </Button>
+                        </>
+                      ) : groups.filter((g) => g.active).length === 0 ? (
+                        <button
+                          type="button"
+                          disabled={running}
+                          onClick={() => setEditingGroups(true)}
+                          className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          <div className="text-xs text-muted-foreground">
+                            Nenhum grupo ativo.{" "}
+                            <span className="text-foreground">Clique em editar para ativar.</span>
+                          </div>
+                        </button>
+                      ) : (
+                        groups
+                          .filter((g) => g.active)
+                          .map((g) => {
+                            return (
+                              <GroupSummaryCard
+                                key={g.id}
+                                group={g}
+                                showIcon={settings.showGroupIcons}
+                                censorPhoto={settings.censorGroupPhoto}
+                                censorName={settings.censorGroupName}
+                                censorDraft={settings.censorDraft}
+                              />
+                            );
+                          })
+                      )}
+                    </div>
 
-            {/* Eventos */}
-            <Reveal delay={0.1} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-sans font-medium text-readable-muted inline-flex items-center gap-1.5">
-                  <Activity className="size-5 text-primary" strokeWidth={1.5} aria-hidden /> Eventos
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto px-0 py-0 text-[11px] font-sans text-readable-muted hover:bg-transparent hover:text-foreground"
-                  onClick={() => monitor.clearLogs()}
-                >
-                  Limpar
-                </Button>
-              </div>
-              <MonitorLog entries={logs} showTime={false} isMonitoring={running} />
-            </Reveal>
+                    {/* Método */}
+                    <div className="mt-4 pt-4 hairline-t">
+                      <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
+                        Método
+                        <HelpHint side="top" iconClassName="size-3">
+                          <MethodHelp />
+                        </HelpHint>
+                      </div>
+                      <Select
+                        value={client?.method ?? "abertura"}
+                        onValueChange={(v) => {
+                          if (!client) return;
+                          if (methodReloadRef.current) window.clearTimeout(methodReloadRef.current);
+                          setVerifying(true);
+                          clientsStore.update(client.id, {
+                            method: v as "abertura" | "mensagem" | "abertura2",
+                          });
+                          setClient(clientsStore.get(client.id) ?? null);
+                          methodReloadRef.current = window.setTimeout(
+                            () => setVerifying(false),
+                            900,
+                          );
+                        }}
+                        disabled={running}
+                      >
+                        <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
+                          {client?.method === "mensagem"
+                            ? "Grupo aberto"
+                            : client?.method === "abertura2"
+                              ? "Grupo aberto 2"
+                              : "Grupo fechado"}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="abertura">Grupo fechado</SelectItem>
+                          <SelectItem value="mensagem">Grupo aberto</SelectItem>
+                          <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {client?.method === "abertura2" && (
+                        <ScheduleTimeCard
+                          clientId={client.id}
+                          value={client.scheduleEnv}
+                          running={running}
+                          onSaved={() => setClient(clientsStore.get(client.id) ?? null)}
+                        />
+                      )}
+                    </div>
+                  </MonitorClientCard>
+                </div>
+              </section>
+              <section className="sb-panel min-w-0" aria-labelledby="single-events-heading">
+                <div className="sb-section-head">
+                  <div>
+                    <p className="sb-eyebrow">ACOMPANHAMENTO</p>
+                    <h2
+                      id="single-events-heading"
+                      className="mt-1 flex items-center gap-2 text-base font-medium"
+                    >
+                      <Activity className="size-4" aria-hidden />
+                      Eventos
+                    </h2>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={!logs.length}
+                    className="h-8 px-2 text-xs"
+                    onClick={() => monitor.clearLogs()}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+                <div className="p-3 sm:p-5">
+                  <MonitorLog entries={logs} showTime isMonitoring={running} />
+                </div>
+                <div className="flex flex-wrap justify-between gap-2 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
+                  <span>
+                    {logs.length} {logs.length === 1 ? "evento registrado" : "eventos registrados"}
+                  </span>
+                  <span>Horários de Brasília</span>
+                </div>
+              </section>
+            </div>
           </div>
 
-          <AddGroupModal open={modalOpen} onOpenChange={setModalOpen} onSaved={reloadGroups} />
+          <AddGroupModal
+            key={client?.id}
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            onSaved={reloadGroups}
+          />
           <EditGroupModal
             group={editing}
             onOpenChange={(v) => {

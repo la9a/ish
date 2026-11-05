@@ -85,12 +85,12 @@ function DashboardHome() {
       <AccessNotification open={notice} title="Cliente adicionada com sucesso" />
       <div className="sb-page-header">
         <div>
-          <p className="sb-eyebrow">SEU ESPAÇO DE TRABALHO</p>
+          <p className="sb-eyebrow">SENHA BAIXA</p>
           <h1 className="mt-2">
-            Tudo no seu controle<span className="text-muted-foreground">.</span>
+            Visão geral<span className="text-muted-foreground">.</span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Olá{name ? `, ${name}` : ""}. Vamos organizar os atendimentos de hoje?
+            Olá{name ? `, ${name}` : ""}. Aqui está o resumo das suas contas.
           </p>
         </div>
         <Link to="/dashboard/cadastro" className="sb-button">
@@ -99,18 +99,18 @@ function DashboardHome() {
       </div>
       <section className="sb-hero">
         <div className="sb-hero-copy">
-          <span className="sb-art-pill">MENOS ABAS. MAIS FOCO. ↗</span>
+          <span className="sb-art-pill">CLIENTES E ATENDIMENTOS</span>
           <h2>
-            Você cuida
+            Suas clientes
             <br />
-            das clientes.
+            e seus grupos.
             <br />
-            <span>A gente conecta.</span>
+            <span>Contas e rascunhos.</span>
           </h2>
           <p>
             Contas, grupos e rascunhos juntos.
             <br />
-            Sua operação com espaço para respirar.
+            Abra uma cliente para preparar o envio.
           </p>
           <Link to="/dashboard/unico" className="sb-button mt-6">
             Gerenciar minhas clientes <ArrowUpRight className="size-4" />
@@ -122,12 +122,6 @@ function DashboardHome() {
             alt="Gato estiloso de óculos em arte colorida"
             fetchPriority="high"
           />
-          <span className="sb-hero-sticker">
-            NA SUA
-            <br />
-            <em>melhor fase.</em>
-            <ArrowUpRight className="mt-1 size-7" />
-          </span>
         </div>
       </section>
       <section className="sb-stats" aria-label="Resumo da sua conta">
@@ -163,7 +157,7 @@ function DashboardHome() {
               <span className="sb-empty-icon">
                 <Users className="size-6" strokeWidth={1.5} />
               </span>
-              <h3>Sua primeira cliente começa aqui.</h3>
+              <h3>Nenhuma cliente cadastrada.</h3>
               <p>
                 Adicione uma conta Telegram para preparar
                 <br className="hidden sm:block" /> seus grupos e rascunhos.
@@ -198,14 +192,14 @@ function DashboardHome() {
           )}
         </section>
         <section className="sb-panel p-5">
-          <p className="sb-eyebrow">DO SEU JEITO</p>
-          <h2 className="mt-2 text-lg">Como vamos atender?</h2>
+          <p className="sb-eyebrow">ATALHOS</p>
+          <h2 className="mt-2 text-lg">Abrir atendimento</h2>
           <div className="mt-5 space-y-2">
             <Link to="/dashboard/unico" className="sb-mode">
               <UserRound className="size-5" strokeWidth={1.5} />
               <div>
                 <h3>Atendimento único</h3>
-                <p>Uma cliente. Toda a atenção.</p>
+                <p>Monitorar uma conta Telegram.</p>
               </div>
               <ArrowUpRight className="ml-auto size-4" />
             </Link>
@@ -213,7 +207,7 @@ function DashboardHome() {
               <Users className="size-5" strokeWidth={1.5} />
               <div>
                 <h3>Atendimento múltiplo</h3>
-                <p>Várias contas, uma operação.</p>
+                <p>Monitorar várias contas juntas.</p>
               </div>
               <ArrowUpRight className="ml-auto size-4" />
             </Link>
@@ -221,7 +215,7 @@ function DashboardHome() {
           <div className="sb-tip">
             <img src="/art/cat-note.svg" alt="" loading="lazy" />
             <div>
-              <p className="text-xs font-medium">Tudo pronto antes da abertura.</p>
+              <p className="text-xs font-medium">Confira antes de iniciar</p>
               <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
                 Confira o grupo e o rascunho de cada cliente antes de iniciar.
               </p>
@@ -232,7 +226,7 @@ function DashboardHome() {
       <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-[10px] tracking-wider text-muted-foreground">
         <span>SENHA BAIXA © {new Date().getFullYear()}</span>
         <span className="flex items-center gap-1.5">
-          <CheckCircle2 className="size-3.5" /> Uma rotina mais organizada.
+          <CheckCircle2 className="size-3.5" /> Painel de atendimento
         </span>
       </footer>
     </main>

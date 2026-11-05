@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useEffect, useId, useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +20,7 @@ import {
 } from "@/lib/telegram";
 import { storage, clientData, activeClient, type MonitoredGroup } from "@/lib/storage";
 import { TgAvatar } from "@/components/TgAvatar";
-import { Archive, ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { Archive, Check, ChevronRight, Hash, Loader2, Search, Send } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 function friendlyError(e: any): string {
@@ -36,6 +43,7 @@ interface Props {
  * e pelo Painel Multi (por cliente). Qualquer ajuste visual aqui vale para os dois.
  */
 export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) {
+  const messageId = useId();
   const [groups, setGroups] = useState<DialogGroup[] | null>(null);
   const [photos, setPhotos] = useState<Record<string, string | null>>({});
   const [filter, setFilter] = useState("");
@@ -72,12 +80,10 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
 
   useEffect(() => {
     if (!open || !picking || groups !== null) return;
-    const prev = activeClient.get();
-    if (clientId) activeClient.set(clientId);
     const photoClientId = clientId ?? activeClient.get() ?? undefined;
     setLoading(true);
     setError(null);
-    listGroups()
+    listGroups(photoClientId)
       .then((g) => {
         setGroups(g);
         // Carrega fotos em background, sem bloquear a UI
@@ -87,12 +93,12 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
             let item = queue.shift();
             while (item) {
               const currentItem = item;
-            try {
+              try {
                 const url = await loadGroupPhotoById(currentItem.id, photoClientId);
                 if (url) setPhotos((current) => ({ ...current, [currentItem.id]: url }));
-            } catch {
-              /* ignore */
-            }
+              } catch {
+                /* ignore */
+              }
               item = queue.shift();
             }
           });
@@ -100,7 +106,9 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
         })();
       })
       .catch((e) => setError(friendlyError(e)))
-      .finally(() => { setLoading(false); if (clientId) activeClient.set(prev); });
+      .finally(() => {
+        setLoading(false);
+      });
   }, [open, picking, groups, clientId]);
 
   const hasArchived = useMemo(() => (groups ?? []).some((g) => g.archived), [groups]);
@@ -115,10 +123,8 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
 
   const existingIds = useMemo(
     () =>
-      new Set(
-        (clientId ? clientData.getGroups(clientId) : storage.getGroups()).map((g) => g.id)
-      ),
-    [open, groups, clientId]
+      new Set((clientId ? clientData.getGroups(clientId) : storage.getGroups()).map((g) => g.id)),
+    [open, groups, clientId],
   );
 
   async function pickGroup(g: DialogGroup) {
@@ -188,157 +194,252 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
     onSaved();
   }
 
-  const title = picking ? "Selecione um grupo" : "Adicionar grupo";
-
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent
-        className="flex h-[80dvh] w-[calc(100vw-2rem)] min-w-0 max-w-lg flex-col gap-0 overflow-hidden p-0 sm:h-[560px] sm:max-h-[80dvh]"
+        className="flex h-[min(760px,88dvh)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="relative sticky top-0 z-20 shrink-0 border-b border-border bg-background px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
-          {picking && view === "archived" && (
-            <button
-              type="button"
-              onClick={() => goTo("main")}
-              className="absolute left-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-border/70 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground sm:left-6"
-              aria-label="Voltar"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-          )}
-          <DialogTitle className="flex items-center justify-center text-center">
-            {title}
-          </DialogTitle>
+        <DialogHeader className="relative shrink-0 overflow-hidden border-b border-border bg-card px-5 py-6 text-left sm:px-7">
+          <div className="relative z-10 max-w-[80%]">
+            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-background/50 px-2 py-1 text-[9px] uppercase tracking-[.14em] text-muted-foreground">
+              <span className="text-foreground">{picking ? "01" : "02"}</span>
+              {picking ? "Destino" : "Mensagem"}
+              <span className="text-border">/</span>Adicionar grupo
+            </span>
+            <DialogTitle className="mt-4 text-2xl font-medium tracking-tight">
+              {picking ? "Escolher grupo" : "Preparar rascunho"}
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              {picking
+                ? "Selecione um grupo da conta Telegram desta cliente."
+                : "Revise o destino e a mensagem que será enviada."}
+            </DialogDescription>
+          </div>
+          <img
+            src="/art/cat-note.svg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-6 -bottom-12 h-44 w-44 rotate-[-12deg] object-cover opacity-80 sm:right-4"
+          />
         </DialogHeader>
 
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-6 sm:px-6 sm:pb-5 sm:pt-7">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
           {picking ? (
-          <div className="w-full min-w-0 overflow-x-hidden" style={{ perspective: 900 }}>
-            <div className="mb-5 w-full">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Buscar..."
-                  disabled={!groups}
-                  className="h-11 w-full rounded-full pl-10"
-                />
-              </div>
-            </div>
-
-          <AnimatePresence mode="wait" custom={dir} initial={false}>
-          <motion.div
-            key={view}
-            custom={dir}
-            variants={{
-              enter: (d: number) => ({ opacity: 0, x: 64 * d, rotateY: 10 * d }),
-              center: { opacity: 1, x: 0, rotateY: 0 },
-              exit: (d: number) => ({ opacity: 0, x: -64 * d, rotateY: -8 * d }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformStyle: "preserve-3d" }}
-            className="w-full min-w-0 space-y-3 overflow-x-hidden"
-          >
-            {view === "main" && hasArchived && (
-              <button
-                type="button"
-                onClick={() => goTo("archived")}
-                className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-muted/30 px-3 py-2.5 text-left transition hover:bg-muted/60"
-              >
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-secondary-foreground">
-                  <Archive className="size-5" />
+            <div className="min-w-0 overflow-hidden">
+              <div className="mb-5 flex flex-wrap items-center gap-3">
+                <div className="relative min-w-0 flex-1">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    type="search"
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                    placeholder="Buscar grupo pelo nome..."
+                    aria-label="Buscar grupo pelo nome"
+                    disabled={!groups}
+                    className="h-10 rounded-lg bg-card pl-10 text-xs"
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {filtered.length} {filtered.length === 1 ? "grupo" : "grupos"}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">Arquivados</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-            )}
-
-            <div className="w-full min-w-0 space-y-1 overflow-x-hidden rounded-2xl border border-border/70 p-1">
-              {loading && !groups && (
-                <div className="flex w-full items-center justify-center gap-2 px-3 py-6 text-center text-sm text-muted-foreground">
-                  <Loader2 className="size-3.5 animate-spin" /> Carregando grupos…
-                </div>
-              )}
-              {groups && filtered.length === 0 && (
-                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhum grupo encontrado
-                </div>
-              )}
-              {filtered.map((g) => {
-                const isCurrent = resolved?.id === g.id;
-                const already = existingIds.has(g.id) && !isCurrent;
-                return (
+              </div>
+              <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
+                <button
+                  type="button"
+                  onClick={() => goTo("main")}
+                  aria-pressed={view === "main"}
+                  className={`rounded-lg px-3 py-2 text-xs transition-colors ${view === "main" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  Grupos
+                </button>
+                {hasArchived && (
                   <button
-                    key={g.id}
                     type="button"
-                    onClick={() => !already && pickGroup(g)}
-                    disabled={loading || already}
-                    className="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted/60 disabled:opacity-50"
+                    onClick={() => goTo("archived")}
+                    aria-pressed={view === "archived"}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs transition-colors ${view === "archived" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}
                   >
-                    {photos[g.id] ? (
-                      <img
-                        src={photos[g.id] as string}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full border border-border object-cover"
-                      />
-                    ) : (
-                      <TgAvatar name={g.name} single className="shrink-0" />
-                    )}
-                    <span
-                      className="block min-w-0 max-w-full overflow-hidden font-medium"
-                      style={{ textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    <Archive className="size-3.5" aria-hidden />
+                    Arquivados
+                  </button>
+                )}
+              </div>
+              <AnimatePresence mode="wait" custom={dir} initial={false}>
+                <motion.div
+                  key={view}
+                  custom={dir}
+                  variants={{
+                    enter: (direction: number) => ({ opacity: 0, x: 16 * direction }),
+                    center: { opacity: 1, x: 0 },
+                    exit: (direction: number) => ({ opacity: 0, x: -16 * direction }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.18 }}
+                  className="space-y-2"
+                >
+                  {loading && !groups && (
+                    <div
+                      role="status"
+                      className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border px-5 py-12 text-xs text-muted-foreground"
                     >
-                      {g.name}
-                    </span>
-                    {isCurrent ? (
-                      <span className="w-20 shrink-0 text-right text-[10px] uppercase text-foreground">atual</span>
-                    ) : already ? (
-                      <span className="w-20 shrink-0 text-right text-[10px] uppercase text-success">Já adicionado</span>
-                    ) : (
-                      <span className="w-20 shrink-0 text-right text-[10px] uppercase text-muted-foreground">
-                        {g.isChannel ? "canal" : "grupo"}
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                      Carregando grupos…
+                    </div>
+                  )}
+                  {groups && !filtered.length && (
+                    <div className="rounded-xl border border-dashed border-border px-5 py-12 text-center">
+                      <Hash className="mx-auto size-6 text-muted-foreground" aria-hidden />
+                      <p className="mt-3 text-sm">Nenhum grupo encontrado</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {filter.trim()
+                          ? "Tente buscar por outro nome."
+                          : view === "archived"
+                            ? "Não há grupos arquivados nesta conta."
+                            : "Os grupos desta conta aparecerão aqui."}
+                      </p>
+                    </div>
+                  )}
+                  {filtered.map((g, index) => {
+                    const isCurrent = resolved?.id === g.id;
+                    const already = existingIds.has(g.id) && !isCurrent;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => !already && pickGroup(g)}
+                        disabled={loading || already}
+                        className="group flex w-full min-w-0 items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 text-left transition-colors hover:border-foreground/40 hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+                      >
+                        <span className="hidden w-5 shrink-0 text-[10px] tabular-nums text-muted-foreground sm:block">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        {photos[g.id] ? (
+                          <img
+                            src={photos[g.id] as string}
+                            alt=""
+                            className="size-10 shrink-0 rounded-xl border border-border object-cover"
+                          />
+                        ) : (
+                          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-background">
+                            <TgAvatar name={g.name} single className="shrink-0" />
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-medium sm:text-sm">
+                            {g.name}
+                          </span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                            {g.isChannel ? "Canal" : "Grupo"}
+                            {g.archived ? " · Arquivado" : ""}
+                          </span>
+                        </span>
+                        {isCurrent || already ? (
+                          <span className="inline-flex shrink-0 items-center gap-1 text-[9px] text-muted-foreground">
+                            <Check className="size-3" aria-hidden />
+                            {isCurrent ? "Selecionado" : "Adicionado"}
+                          </span>
+                        ) : (
+                          <ChevronRight
+                            className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted">
+                  <Hash className="size-5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] uppercase tracking-[.12em] text-muted-foreground">
+                    Destino selecionado
+                  </p>
+                  <p className="mt-1 truncate text-sm font-medium">{resolved?.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPicking(true)}
+                  className="shrink-0 text-[11px] text-muted-foreground underline underline-offset-4"
+                >
+                  Alterar
+                </button>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <Label htmlFor={messageId} className="text-xs">
+                      Rascunho da cliente
+                    </Label>
+                    {resolved?.draft && (
+                      <span className="rounded-md border border-border px-2 py-1 text-[9px] text-muted-foreground">
+                        Carregado do Telegram
                       </span>
                     )}
-                  </button>
-                );
-              })}
+                  </div>
+                  <Textarea
+                    id={messageId}
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    rows={8}
+                    placeholder="Ex.: Maria x João · Raio 5 · Cela 2"
+                    className="min-h-48 resize-y rounded-xl border border-solid border-border bg-card p-4 font-sans text-sm leading-relaxed"
+                  />
+                  <p className="mt-2 text-[10px] tabular-nums text-muted-foreground">
+                    {message.length} caracteres
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="flex items-center gap-2 text-[9px] uppercase tracking-[.12em] text-muted-foreground">
+                    <Send className="size-3" aria-hidden />
+                    Prévia da mensagem
+                  </p>
+                  <div className="mt-4 rounded-xl rounded-br-sm border border-border bg-muted/60 p-4">
+                    <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
+                      {message.trim() || "O rascunho aparecerá aqui."}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+                    A mensagem será enviada ao grupo selecionado quando o monitoramento disparar.
+                  </p>
+                </div>
+              </div>
             </div>
-          </motion.div>
-          </AnimatePresence>
-          </div>
-          ) : (
-          <div className="space-y-3 animate-in fade-in duration-300">
-            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-1 overflow-hidden rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-              <span className="text-muted-foreground text-xs">Grupo:</span>
-              <span className="block min-w-0 truncate font-medium">{resolved?.name}</span>
-            </div>
-            <div>
-              <Label className="text-sm">
-                Rascunho {resolved?.draft && <span className="text-success">· carregado</span>}
-              </Label>
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={6}
-                placeholder="Digite o rascunho a enviar quando o grupo abrir..."
-              />
-            </div>
-          </div>
           )}
-
           {error && (
-            <div className="mt-4 space-y-2">
-              <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger font-mono">
+            <div className="mt-5 space-y-3">
+              <p
+                role="alert"
+                className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-xs leading-relaxed text-danger"
+              >
                 {error}
               </p>
               {picking && (
-                <Button variant="outline" size="sm" onClick={retryList} disabled={loading} className="w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryList}
+                  disabled={loading}
+                  className="w-full"
+                >
                   {loading ? "Tentando…" : "Tentar novamente"}
                 </Button>
               )}
@@ -346,12 +447,28 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
           )}
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-border bg-background px-4 py-4 sm:px-6">
-          {!picking && (
-            <Button onClick={save} disabled={!message.trim()}>
-              Adicionar
+        <DialogFooter className="shrink-0 items-center gap-3 border-t border-border bg-card px-5 py-4 sm:justify-between sm:px-7">
+          <span className="mr-auto hidden text-[10px] text-muted-foreground sm:block">
+            {picking ? "Etapa 1 de 2 · Seleção do destino" : "Etapa 2 de 2 · Revisão do rascunho"}
+          </span>
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                reset();
+                onOpenChange(false);
+              }}
+            >
+              Cancelar
             </Button>
-          )}
+            {!picking && (
+              <Button type="button" onClick={save} disabled={!message.trim()}>
+                <Check className="size-4" aria-hidden />
+                Adicionar grupo
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

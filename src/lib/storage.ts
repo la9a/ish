@@ -62,7 +62,13 @@ export interface ClientRecord {
    *  Se o mês não tem o dia (ex: 31/fev), pula pro último dia do mês. */
   monthlyDays?: number[] | null;
   /** Exceções pontuais: "mover atendimento de X pra Y". Datas em YYYY-MM-DD (fuso local). */
-  scheduleOverrides?: Array<{ id: string; from: string; to: string; note?: string | null; skip?: boolean | null }> | null;
+  scheduleOverrides?: Array<{
+    id: string;
+    from: string;
+    to: string;
+    note?: string | null;
+    skip?: boolean | null;
+  }> | null;
   /** Username/link do grupo preferencial (opcional). */
   preferredGroup?: string | null;
   /** Método de disparo:
@@ -161,7 +167,10 @@ export const storage = {
   // Apenas grava local — usado pelo cloudSync no pull, sem reenviar pra nuvem.
   _setCredsLocalFor: (clientId: string, c: TgCreds) => {
     if (!isBrowser()) return;
-    window.localStorage.setItem(`${userScope()}:client:${clientId}:${KEY_CREDS}`, JSON.stringify(c));
+    window.localStorage.setItem(
+      `${userScope()}:client:${clientId}:${KEY_CREDS}`,
+      JSON.stringify(c),
+    );
   },
   _setSessionLocalFor: (clientId: string, s: string) => {
     if (!isBrowser()) return;
@@ -246,7 +255,10 @@ export const clientsStore = {
     cloud.pushClient(appAuth.currentUserId(), all[idx]);
   },
   remove(id: string) {
-    write(clientsKey(), clientsStore.list().filter((c) => c.id !== id));
+    write(
+      clientsKey(),
+      clientsStore.list().filter((c) => c.id !== id),
+    );
     cloud.deleteClient(appAuth.currentUserId(), id);
   },
   // Apaga creds/session/groups/me daquele cliente, independente de estar ativo.
@@ -297,7 +309,10 @@ export const clientData = {
     cloud.pushGroup(appAuth.currentUserId(), clientId, g);
   },
   removeGroup(clientId: string, id: string) {
-    clientData.setGroups(clientId, clientData.getGroups(clientId).filter((g) => g.id !== id));
+    clientData.setGroups(
+      clientId,
+      clientData.getGroups(clientId).filter((g) => g.id !== id),
+    );
     cloud.deleteGroup(appAuth.currentUserId(), clientId, id);
   },
 };
@@ -384,6 +399,8 @@ export const monitorSettings = {
 export type WizardStep = "title" | "creds" | "phone" | "mtCode" | "code";
 
 export interface WizardDraft {
+  /** Identity of the pending Telegram authentication, retained across reloads. */
+  clientId?: string;
   step: WizardStep;
   title: string;
   schedRas: string;

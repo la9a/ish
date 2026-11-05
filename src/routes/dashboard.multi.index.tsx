@@ -1,3 +1,4 @@
+import { PageBanner } from "@/components/PageBanner";
 import { AdminLayout } from "./admin";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -21,34 +22,23 @@ import {
 import {
   ArrowLeft,
   Play,
-  Pause,
   Square,
   Settings as SettingsIcon,
-  Check,
   Activity,
   Search,
   ArrowUpRight,
   Pin,
   PinOff,
-  UserPlus,
   Plus,
   Users,
 } from "lucide-react";
 import { MonitorLog } from "@/components/MonitorLog";
 import { AddGroupModal } from "@/components/AddGroupModal";
 import { EditGroupModal } from "@/components/EditGroupModal";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { HelpHint } from "@/components/HelpHint";
 import { MethodHelp } from "@/components/MethodHelp";
 
-import { Reveal } from "@/components/motion/Reveal";
 import { playSound } from "@/lib/beep";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
@@ -354,20 +344,61 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
 
   // ============ SELECT PHASE ============
   if (phase === "select") {
+    const renderClient = (c: ClientRecord) => {
+      const checked = selected.has(c.id);
+      const disabled = !checked && selected.size >= MAX;
+      const groupCount = clientData.getGroups(c.id).filter((group) => group.active).length;
+      return (
+        <div
+          key={c.id}
+          className={`flex items-center gap-3 rounded-xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-ring ${checked ? "border-foreground bg-white/[.05]" : "border-border bg-background/40 hover:border-foreground/40"} ${disabled ? "opacity-40" : ""}`}
+        >
+          <label
+            className={`flex min-w-0 flex-1 items-center gap-3 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={disabled}
+              onChange={() => toggle(c)}
+              aria-label={`Selecionar ${c.title}`}
+              className="size-4 shrink-0 accent-white"
+            />
+            <ClientAvatar name={c.title} />
+            <span className="min-w-0 flex-1">
+              <span
+                className={`block truncate text-sm font-medium ${settings.censorClientTitle ? "censor-text" : ""}`}
+              >
+                {c.title}
+              </span>
+              <span className="mt-1 block text-[10px] text-muted-foreground">
+                {groupCount} {groupCount === 1 ? "grupo ativo" : "grupos ativos"}
+                {c.scheduleEnv ? ` · ${c.scheduleEnv}` : ""}
+              </span>
+            </span>
+          </label>
+          <button
+            type="button"
+            onClick={(event) => togglePin(c, event)}
+            className={`grid size-9 place-items-center rounded-lg hover:bg-white/5 ${c.pinned ? "text-foreground" : "text-muted-foreground"}`}
+            aria-label={`${c.pinned ? "Desafixar" : "Fixar"} ${c.title}`}
+            aria-pressed={Boolean(c.pinned)}
+          >
+            {c.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+          </button>
+        </div>
+      );
+    };
     return (
       <main className="sb-page">
-        <div className="mx-auto max-w-6xl">
-          <div className="sb-page-header">
-            <div>
-              <p className="sb-eyebrow">MAIS CLIENTES, UM SÓ LUGAR</p>
-              <h1 className="mt-2">
-                Atendimento múltiplo<span className="text-muted-foreground">.</span>
-              </h1>
-              <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-                Selecione de 2 a {MAX} contas conectadas para preparar e acompanhar seus
-                atendimentos.
-              </p>
-            </div>
+        <div className="mx-auto max-w-7xl">
+          <PageBanner
+            image="/art/cat-monitor.svg"
+            eyebrow="ATENDIMENTO MÚLTIPLO"
+            title="Selecionar clientes"
+            description={`Escolha de 2 a ${MAX} contas conectadas para o monitoramento simultâneo.`}
+            tone="lilac"
+          >
             <button
               type="button"
               className="sb-button-secondary"
@@ -376,156 +407,194 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               <Plus className="size-4" aria-hidden />
               Nova cliente
             </button>
-          </div>
-
-          {eligible.length === 0 ? (
-            <div className="mt-8 rounded-2xl border border-border bg-card p-16 text-center relative overflow-hidden">
-              <div className="relative">
-                <div className="mx-auto mb-6 inline-flex size-14 items-center justify-center rounded-2xl bg-foreground text-background">
-                  <UserPlus className="size-6" />
-                </div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  {clients.length === 0
-                    ? "Seu atendimento múltiplo começa aqui"
-                    : "Conecte suas clientes para continuar"}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {clients.length === 0
-                    ? "Adicione e conecte pelo menos duas clientes para operar ao mesmo tempo."
-                    : "Reconecte as contas das suas clientes antes de iniciar o atendimento múltiplo."}
-                </p>
-                <div className="mt-8">
-                  <Button
-                    onClick={() => navigate({ to: "/dashboard/cadastro" })}
-                    className="btn-sweep h-11 rounded-xl px-5"
-                  >
-                    <Plus className="size-4" /> Adicionar cliente
-                  </Button>
-                </div>
+          </PageBanner>
+          <div className="sb-monitor-strip" aria-label="Resumo das contas">
+            <div className="flex flex-wrap gap-7">
+              <div>
+                <span className="block text-[10px] text-muted-foreground">Contas conectadas</span>
+                <span className="sb-number mt-1 block">
+                  {String(eligible.length).padStart(2, "0")}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-muted-foreground">Selecionadas</span>
+                <span className="sb-number mt-1 block">
+                  {String(selected.size).padStart(2, "0")}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">/ {MAX}</span>
+                </span>
               </div>
             </div>
-          ) : (
-            <>
-              <Reveal delay={0.06} className="relative mb-5 mt-6">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar cliente..."
-                  aria-label="Buscar cliente pelo nome"
-                  className="pl-10 h-10 rounded-xl text-xs"
-                />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
-                  {filteredEligible.length} / {eligible.length}
+            {clients.length > eligible.length && (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline underline-offset-4"
+                onClick={() => navigate({ to: "/admin/connection" })}
+              >
+                {clients.length - eligible.length}{" "}
+                {clients.length - eligible.length === 1 ? "conta precisa" : "contas precisam"} de
+                conexão
+              </button>
+            )}
+          </div>
+          <div className="sb-workspace-grid">
+            <section className="sb-panel min-w-0" aria-labelledby="select-clients-heading">
+              <div className="sb-section-head">
+                <h2 id="select-clients-heading" className="text-base font-medium">
+                  Contas disponíveis
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {filteredEligible.length} {filteredEligible.length === 1 ? "conta" : "contas"}
                 </span>
-              </Reveal>
-
-              {(() => {
-                const renderCard = (c: ClientRecord) => {
-                  const checked = selected.has(c.id);
-                  const disabled = !checked && selected.size >= MAX;
-                  return (
-                    <div
-                      key={c.id}
-                      className={`group flex items-center justify-between gap-3 overflow-hidden rounded-xl border bg-card p-4 shadow-none transition-colors focus-within:ring-2 focus-within:ring-ring ${
-                        checked ? "border-primary" : "border-border hover:border-primary/40"
-                      } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+              </div>
+              <div className="border-b border-border p-4">
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Buscar cliente..."
+                    aria-label="Buscar cliente pelo nome"
+                    className="h-10 rounded-lg pl-10 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                {!eligible.length ? (
+                  <div className="py-10 text-center">
+                    <Users
+                      className="mx-auto size-8 text-muted-foreground"
+                      strokeWidth={1.3}
+                      aria-hidden
+                    />
+                    <h3 className="mt-4 text-base">Nenhuma conta conectada</h3>
+                    <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-muted-foreground">
+                      Conecte pelo menos duas clientes para iniciar um atendimento múltiplo.
+                    </p>
+                    <button
+                      type="button"
+                      className="sb-button-secondary mt-6"
+                      onClick={() =>
+                        navigate({
+                          to: clients.length ? "/admin/connection" : "/dashboard/cadastro",
+                        })
+                      }
                     >
-                      <label
-                        className={`flex min-w-0 flex-1 items-center gap-3 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={disabled}
-                          onChange={() => toggle(c)}
-                          aria-label={`Selecionar ${c.title}`}
-                          className="size-4 shrink-0 accent-white"
-                        />
-                        <ClientAvatar name={c.title} />
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium tracking-tight truncate flex items-center gap-1.5">
-                            {c.title}
-                            <ArrowUpRight
-                              className="size-3 text-muted-foreground/50 group-hover:text-primary transition-colors"
-                              strokeWidth={1.5}
-                            />
-                          </div>
-                        </div>
-                      </label>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => togglePin(c, e)}
-                          className={`rounded-lg p-1.5 transition-colors ${c.pinned ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                          aria-label={c.pinned ? "Desafixar" : "Fixar"}
-                          title={c.pinned ? "Desafixar" : "Fixar"}
-                        >
-                          {c.pinned ? (
-                            <PinOff className="size-3.5" />
-                          ) : (
-                            <Pin className="size-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                };
-                return (
-                  <>
+                      {clients.length ? "Gerenciar conexões" : "Adicionar cliente"}
+                    </button>
+                  </div>
+                ) : !filteredEligible.length ? (
+                  <p className="py-12 text-center text-sm text-muted-foreground">
+                    Nenhuma cliente encontrada para “{query}”.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
                     {pinnedList.length > 0 && (
-                      <div className="mb-8">
-                        <h2 className="mb-3 mono-caption inline-flex items-center gap-1.5">
-                          <Pin className="size-3 fill-current text-foreground" /> Fixados ·{" "}
-                          {pinnedList.length}
-                        </h2>
-                        <div className="grid gap-4 items-start sm:grid-cols-2 lg:grid-cols-3">
-                          {pinnedList.map((c) => (
-                            <div key={c.id}>{renderCard(c)}</div>
-                          ))}
+                      <div>
+                        <h3 className="mb-3 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <Pin className="size-3" aria-hidden />
+                          Fixadas
+                        </h3>
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          {pinnedList.map(renderClient)}
                         </div>
                       </div>
                     )}
                     {otherList.length > 0 && (
                       <div>
                         {pinnedList.length > 0 && (
-                          <h2 className="mb-3 mono-caption">Outros · {otherList.length}</h2>
+                          <h3 className="mb-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Outras clientes
+                          </h3>
                         )}
-                        <div className="grid gap-4 items-start sm:grid-cols-2 lg:grid-cols-3">
-                          {otherList.map((c) => (
-                            <div key={c.id}>{renderCard(c)}</div>
-                          ))}
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          {otherList.map(renderClient)}
                         </div>
                       </div>
                     )}
-                  </>
-                );
-              })()}
-            </>
-          )}
-
-          {eligible.length > 0 && filteredEligible.length === 0 && (
-            <p className="rounded-xl border border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhuma cliente encontrada. Tente buscar por outro nome.
-            </p>
-          )}
-          <div className="mt-8 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 sticky bottom-4">
-            <div className="text-xs font-sans text-readable-muted">
-              {selected.size}/{MAX} selecionado{selected.size === 1 ? "" : "s"}
-            </div>
-            {selected.size >= 2 && (
-              <Button
-                onClick={() => {
-                  const ids = Array.from(selected);
-                  const hash = combinedSelectionId(ids);
-                  storeSelection(hash, ids);
-                  navigate({ to: "/dashboard/multi/$selectionId", params: { selectionId: hash } });
-                }}
-                className="btn-sweep rounded-xl h-10 px-5 text-sm"
-              >
-                Continuar
-              </Button>
-            )}
+                  </div>
+                )}
+              </div>
+            </section>
+            <aside
+              className="sb-panel min-w-0 self-start"
+              aria-labelledby="selected-clients-heading"
+            >
+              <div className="sb-section-head">
+                <div>
+                  <p className="sb-eyebrow">SELEÇÃO ATUAL</p>
+                  <h2 id="selected-clients-heading" className="mt-1 text-base font-medium">
+                    Clientes no atendimento
+                  </h2>
+                </div>
+                <span className="sb-number">{String(selected.size).padStart(2, "0")}</span>
+              </div>
+              <div className="p-5">
+                {selectedList.length ? (
+                  <ol className="space-y-3">
+                    {selectedList.map((c, index) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center gap-3 border-b border-border pb-3"
+                      >
+                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <span
+                          className={`min-w-0 flex-1 truncate text-xs ${settings.censorClientTitle ? "censor-text" : ""}`}
+                        >
+                          {c.title}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-[10px] text-muted-foreground hover:text-foreground"
+                          onClick={() => toggle(c)}
+                          aria-label={`Remover ${c.title} da seleção`}
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border px-5 py-9 text-center">
+                    <Users
+                      className="mx-auto size-6 text-muted-foreground"
+                      strokeWidth={1.2}
+                      aria-hidden
+                    />
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      As clientes selecionadas aparecem aqui.
+                    </p>
+                  </div>
+                )}
+                <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
+                  {selected.size < 2
+                    ? `Selecione mais ${2 - selected.size} ${2 - selected.size === 1 ? "cliente" : "clientes"} para continuar.`
+                    : "Revise a seleção antes de abrir o monitoramento."}
+                </p>
+                <Button
+                  type="button"
+                  disabled={selected.size < 2}
+                  className="mt-4 h-11 w-full rounded-lg"
+                  onClick={() => {
+                    const ids = Array.from(selected);
+                    const hash = combinedSelectionId(ids);
+                    storeSelection(hash, ids);
+                    navigate({
+                      to: "/dashboard/multi/$selectionId",
+                      params: { selectionId: hash },
+                    });
+                  }}
+                >
+                  Abrir monitoramento
+                  <ArrowUpRight className="size-4" aria-hidden />
+                </Button>
+              </div>
+            </aside>
           </div>
         </div>
       </main>
@@ -535,32 +604,18 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
   // ============ PANEL PHASE ============
   return (
     <main className="sb-page">
-      <div className="mx-auto max-w-6xl">
-        <div className="sb-page-header">
-          <div>
-            <p className="sb-eyebrow">SEUS ATENDIMENTOS, LADO A LADO</p>
-            <h1 className="mt-2">
-              Atendimento múltiplo<span className="text-muted-foreground">.</span>
-            </h1>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {selectedList.length} contas selecionadas. Cada cliente com seu grupo e seu rascunho.
-            </p>
-          </div>
-          <span
-            role="status"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] text-muted-foreground"
-          >
-            <span
-              className={`size-1.5 rounded-full ${running ? "bg-success" : "bg-muted-foreground"}`}
-              aria-hidden
-            />
-            {running ? "Monitoramento em andamento" : "Monitoramento pausado"}
-          </span>
-        </div>
-        <Reveal className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            size="sm"
+      <div className="mx-auto max-w-7xl">
+        <PageBanner
+          image="/art/cat-monitor.svg"
+          compact
+          eyebrow="ATENDIMENTO MÚLTIPLO"
+          title="Monitoramento"
+          description="Confira os grupos e rascunhos de cada cliente e acompanhe os eventos da operação."
+          tone="lilac"
+        >
+          <button
+            type="button"
+            className="sb-button-secondary"
             onClick={() => {
               if (running) {
                 try {
@@ -569,24 +624,54 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                   /* ignore */
                 }
               }
-              navigate({ to: "/dashboard" });
+              navigate({ to: "/dashboard/multi" });
             }}
-            className="site-control-glass gap-1.5 h-9 rounded-xl"
           >
-            <ArrowLeft className="size-4" /> Voltar
-          </Button>
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <ArrowLeft className="size-4" aria-hidden />
+            Alterar seleção
+          </button>
+        </PageBanner>
+        <section className="sb-monitor-strip" aria-label="Controles do monitoramento múltiplo">
+          <div className="flex flex-wrap items-center gap-5">
+            <span className={`sb-live-chip ${running ? "is-live" : ""}`} role="status">
+              <span aria-hidden />
+              {running ? "Em execução" : "Parado"}
+            </span>
+            <div>
+              <span className="block text-[10px] text-muted-foreground">Clientes</span>
+              <span className="sb-number mt-1 block">
+                {String(selectedList.length).padStart(2, "0")}
+              </span>
+            </div>
+            <div>
+              <span className="block text-[10px] text-muted-foreground">Grupos ativos</span>
+              <span className="sb-number mt-1 block">
+                {selectedList.reduce(
+                  (total, c) =>
+                    total + clientData.getGroups(c.id).filter((group) => group.active).length,
+                  0,
+                )}
+              </span>
+            </div>
+            <div>
+              <span className="block text-[10px] text-muted-foreground">Conexão</span>
+              <span role="status" className="mt-1 block text-xs">
+                {prewarming ? "Conectando…" : miamiReady ? "Pronta" : "Aguardando"}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <BrasiliaClock />
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setPanelOpen(true)}
-              className="site-control-glass gap-1.5 h-9 rounded-xl shadow-none"
+              className="h-10 rounded-lg gap-2"
               aria-label="Abrir opções de envio"
             >
-              <SettingsIcon className="size-4" />
-              <span className="hidden sm:inline">Opções de envio</span>
+              <SettingsIcon className="size-4" aria-hidden />
+              <span className="hidden xl:inline">Opções de envio</span>
             </Button>
             {running ? (
               <Button
@@ -605,173 +690,208 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               </Button>
             )}
           </div>
-        </Reveal>
-
-        <Reveal delay={0.05} className="space-y-4">
-          <div className="space-y-4">
-            {selectedList.map((c) => {
-              const groups = clientData.getGroups(c.id).filter((g) => g.active);
-              return (
-                <div key={c.id}>
-                  <MonitorClientCard
-                    title={c.title}
-                    censorTitle={settings.censorClientTitle}
-                    editing={editingClientId === c.id}
-                    disabled={running}
-                    onEditingChange={() =>
-                      setEditingClientId(editingClientId === c.id ? null : c.id)
-                    }
-                    clientId={c.id}
-                    groups={groups.map((g) => ({ id: g.id, name: g.name }))}
-                  >
-                    <div className="mb-1 text-xs font-sans text-readable-muted">Grupo</div>
-                    <div className="space-y-2">
-                      {editingClientId === c.id ? (
-                        (() => {
-                          const all = clientData.getGroups(c.id);
-                          return (
-                            <div className="space-y-2">
-                              {all.length === 0 ? (
-                                <button
-                                  type="button"
+        </section>
+        <div className="sb-workspace-grid">
+          <section className="sb-panel min-w-0" aria-labelledby="multi-clients-heading">
+            <div className="sb-section-head">
+              <div>
+                <p className="sb-eyebrow">PREPARAÇÃO</p>
+                <h2 id="multi-clients-heading" className="mt-1 text-base font-medium">
+                  Clientes e rascunhos
+                </h2>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                {selectedList.length} contas
+              </span>
+            </div>
+            <div className="sb-monitor-columns space-y-4 p-3 sm:p-5">
+              {selectedList.map((c) => {
+                const groups = clientData.getGroups(c.id).filter((g) => g.active);
+                return (
+                  <div key={c.id}>
+                    <MonitorClientCard
+                      title={c.title}
+                      censorTitle={settings.censorClientTitle}
+                      editing={editingClientId === c.id}
+                      disabled={running}
+                      onEditingChange={() =>
+                        setEditingClientId(editingClientId === c.id ? null : c.id)
+                      }
+                      clientId={c.id}
+                      groups={groups.map((g) => ({ id: g.id, name: g.name }))}
+                    >
+                      <div className="mb-1 text-xs font-sans text-readable-muted">Grupo</div>
+                      <div className="space-y-2">
+                        {editingClientId === c.id ? (
+                          (() => {
+                            const all = clientData.getGroups(c.id);
+                            return (
+                              <div className="space-y-2">
+                                {all.length === 0 ? (
+                                  <button
+                                    type="button"
+                                    disabled={running}
+                                    onClick={() => setInnerEditor({ clientId: c.id, addNew: true })}
+                                    className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                                  >
+                                    <div className="text-xs text-muted-foreground">
+                                      Nenhum grupo cadastrado.{" "}
+                                      <span className="text-foreground">
+                                        Clique para adicionar.
+                                      </span>
+                                    </div>
+                                  </button>
+                                ) : (
+                                  all.map((g) => (
+                                    <GroupSummaryCard
+                                      key={g.id}
+                                      group={g}
+                                      showIcon={settings.showGroupIcons}
+                                      censorPhoto={settings.censorGroupPhoto}
+                                      censorName={settings.censorGroupName}
+                                      censorDraft={settings.censorDraft}
+                                      editing
+                                      disabled={running}
+                                      onToggle={() => {
+                                        clientData.upsertGroup(c.id, { ...g, active: !g.active });
+                                        setReloadTick((n) => n + 1);
+                                      }}
+                                      onEdit={() =>
+                                        setInnerEditor({ clientId: c.id, groupId: g.id })
+                                      }
+                                      onRemove={() => {
+                                        const next = clientData
+                                          .getGroups(c.id)
+                                          .filter((x) => x.id !== g.id);
+                                        clientData.setGroups(c.id, next);
+                                        setReloadTick((n) => n + 1);
+                                      }}
+                                    />
+                                  ))
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   disabled={running}
                                   onClick={() => setInnerEditor({ clientId: c.id, addNew: true })}
-                                  className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                                  className="site-control-glass rounded-lg h-9 w-full"
                                 >
-                                  <div className="text-xs text-muted-foreground">
-                                    Nenhum grupo cadastrado.{" "}
-                                    <span className="text-foreground">Clique para adicionar.</span>
-                                  </div>
-                                </button>
-                              ) : (
-                                all.map((g) => (
-                                  <GroupSummaryCard
-                                    key={g.id}
-                                    group={g}
-                                    showIcon={settings.showGroupIcons}
-                                    censorPhoto={settings.censorGroupPhoto}
-                                    censorName={settings.censorGroupName}
-                                    censorDraft={settings.censorDraft}
-                                    editing
-                                    disabled={running}
-                                    onToggle={() => {
-                                      clientData.upsertGroup(c.id, { ...g, active: !g.active });
-                                      setReloadTick((n) => n + 1);
-                                    }}
-                                    onEdit={() => setInnerEditor({ clientId: c.id, groupId: g.id })}
-                                    onRemove={() => {
-                                      const next = clientData
-                                        .getGroups(c.id)
-                                        .filter((x) => x.id !== g.id);
-                                      clientData.setGroups(c.id, next);
-                                      setReloadTick((n) => n + 1);
-                                    }}
-                                  />
-                                ))
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={running}
-                                onClick={() => setInnerEditor({ clientId: c.id, addNew: true })}
-                                className="site-control-glass rounded-lg h-9 w-full"
-                              >
-                                + Adicionar grupo
-                              </Button>
-                            </div>
-                          );
-                        })()
-                      ) : (
-                        <>
-                          {groups.length === 0 && (
-                            <button
-                              type="button"
-                              disabled={running}
-                              onClick={() => setEditingClientId(c.id)}
-                              className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              <div className="text-xs text-muted-foreground">
-                                Nenhum grupo ativo.{" "}
-                                <span className="text-foreground">
-                                  Clique para escolher um grupo e definir o rascunho.
-                                </span>
+                                  + Adicionar grupo
+                                </Button>
                               </div>
-                            </button>
-                          )}
-                          {groups.map((g: MonitoredGroup) => {
-                            return (
-                              <GroupSummaryCard
-                                key={g.id}
-                                group={g}
-                                showIcon={settings.showGroupIcons}
-                                censorPhoto={settings.censorGroupPhoto}
-                                censorName={settings.censorGroupName}
-                                censorDraft={settings.censorDraft}
-                              />
                             );
-                          })}
-                        </>
-                      )}
-                    </div>
-                    <div className="mt-4 pt-4 hairline-t">
-                      <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
-                        Método
-                        <HelpHint side="top" iconClassName="size-3">
-                          <MethodHelp />
-                        </HelpHint>
+                          })()
+                        ) : (
+                          <>
+                            {groups.length === 0 && (
+                              <button
+                                type="button"
+                                disabled={running}
+                                onClick={() => setEditingClientId(c.id)}
+                                className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                <div className="text-xs text-muted-foreground">
+                                  Nenhum grupo ativo.{" "}
+                                  <span className="text-foreground">
+                                    Clique para escolher um grupo e definir o rascunho.
+                                  </span>
+                                </div>
+                              </button>
+                            )}
+                            {groups.map((g: MonitoredGroup) => {
+                              return (
+                                <GroupSummaryCard
+                                  key={g.id}
+                                  group={g}
+                                  showIcon={settings.showGroupIcons}
+                                  censorPhoto={settings.censorGroupPhoto}
+                                  censorName={settings.censorGroupName}
+                                  censorDraft={settings.censorDraft}
+                                />
+                              );
+                            })}
+                          </>
+                        )}
                       </div>
-                      <Select
-                        value={c.method ?? "abertura"}
-                        onValueChange={(v) => {
-                          clientsStore.update(c.id, {
-                            method: v as "abertura" | "mensagem" | "abertura2",
-                          });
-                          setClients(clientsStore.list());
-                        }}
-                        disabled={running}
-                      >
-                        <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
-                          {c.method === "mensagem"
-                            ? "Grupo aberto"
-                            : c.method === "abertura2"
-                              ? "Grupo aberto 2"
-                              : "Grupo fechado"}
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="abertura">Grupo fechado</SelectItem>
-                          <SelectItem value="mensagem">Grupo aberto</SelectItem>
-                          <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {c.method === "abertura2" && (
-                        <ScheduleTimeCard
-                          clientId={c.id}
-                          value={c.scheduleEnv}
-                          running={running}
-                          onSaved={() => setClients(clientsStore.list())}
-                        />
-                      )}
-                    </div>
-                  </MonitorClientCard>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-sans font-medium text-readable-muted inline-flex items-center gap-1.5">
-              <Activity className="size-5 text-primary" strokeWidth={1.5} aria-hidden /> Eventos
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto px-0 py-0 text-[11px] font-sans text-readable-muted hover:bg-transparent hover:text-foreground"
-              onClick={() => multiMonitor.clearLogs()}
-            >
-              Limpar
-            </Button>
-          </div>
-          <MonitorLog entries={logs} showTime={false} isMonitoring={running} />
-        </Reveal>
+                      <div className="mt-4 pt-4 hairline-t">
+                        <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
+                          Método
+                          <HelpHint side="top" iconClassName="size-3">
+                            <MethodHelp />
+                          </HelpHint>
+                        </div>
+                        <Select
+                          value={c.method ?? "abertura"}
+                          onValueChange={(v) => {
+                            clientsStore.update(c.id, {
+                              method: v as "abertura" | "mensagem" | "abertura2",
+                            });
+                            setClients(clientsStore.list());
+                          }}
+                          disabled={running}
+                        >
+                          <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
+                            {c.method === "mensagem"
+                              ? "Grupo aberto"
+                              : c.method === "abertura2"
+                                ? "Grupo aberto 2"
+                                : "Grupo fechado"}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="abertura">Grupo fechado</SelectItem>
+                            <SelectItem value="mensagem">Grupo aberto</SelectItem>
+                            <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {c.method === "abertura2" && (
+                          <ScheduleTimeCard
+                            clientId={c.id}
+                            value={c.scheduleEnv}
+                            running={running}
+                            onSaved={() => setClients(clientsStore.list())}
+                          />
+                        )}
+                      </div>
+                    </MonitorClientCard>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          <section className="sb-panel min-w-0 self-start" aria-labelledby="multi-events-heading">
+            <div className="sb-section-head">
+              <div>
+                <p className="sb-eyebrow">ACOMPANHAMENTO</p>
+                <h2
+                  id="multi-events-heading"
+                  className="mt-1 flex items-center gap-2 text-base font-medium"
+                >
+                  <Activity className="size-4" aria-hidden />
+                  Eventos
+                </h2>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={!logs.length}
+                className="h-8 px-2 text-xs"
+                onClick={() => multiMonitor.clearLogs()}
+              >
+                Limpar
+              </Button>
+            </div>
+            <div className="p-3 sm:p-5">
+              <MonitorLog entries={logs} showTime isMonitoring={running} />
+            </div>
+            <div className="flex flex-wrap justify-between gap-2 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
+              <span>
+                {logs.length} {logs.length === 1 ? "evento registrado" : "eventos registrados"}
+              </span>
+              <span>Horários de Brasília</span>
+            </div>
+          </section>
+        </div>
       </div>
       <MonitorSettingsPanel
         open={panelOpen}
@@ -780,6 +900,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
         onChange={updateSettings}
       />
       <AddGroupModal
+        key={innerEditor?.clientId ?? "no-client"}
         open={!!innerEditor?.addNew}
         onOpenChange={(v) => {
           if (!v) setInnerEditor(null);

@@ -1,20 +1,40 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { easeClaude } from "@/lib/motion";
+import {
+  Activity,
+  ArrowDown,
+  CircleCheck,
+  CircleHelp,
+  Info,
+  LoaderCircle,
+  TriangleAlert,
+} from "lucide-react";
 import type { LogEntry } from "@/lib/telegram";
 import { formatBrasiliaHMS } from "@/lib/brasiliaTime";
 
-const colors: Record<LogEntry["level"], string> = {
-  info: "text-foreground/80",
-  success: "text-foreground",
-  warn: "text-warning",
-  error: "text-danger",
-};
-
-const SPINNER = ["✢", "✳", "✴", "✻", "✷", "·"];
-const MONITOR_START_RE = /^\s*iniciado/i;
-
-
+const levels = {
+  info: {
+    label: "Informação",
+    Icon: Info,
+    color: "text-muted-foreground",
+    border: "border-border",
+  },
+  success: {
+    label: "Concluído",
+    Icon: CircleCheck,
+    color: "text-success",
+    border: "border-success/25",
+  },
+  warn: {
+    label: "Atenção",
+    Icon: TriangleAlert,
+    color: "text-warning",
+    border: "border-warning/25",
+  },
+  error: { label: "Erro", Icon: CircleHelp, color: "text-danger", border: "border-danger/25" },
+} satisfies Record<
+  LogEntry["level"],
+  { label: string; Icon: typeof Info; color: string; border: string }
+>;
 
 export function MonitorLog({
   entries,
@@ -26,111 +46,132 @@ export function MonitorLog({
   isMonitoring?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const [spinIdx, setSpinIdx] = useState(0);
-
-  // Cap rendered entries — DOM com centenas de linhas trava scroll/render.
-  const MAX_RENDERED = 300;
-  const visibleEntries =
-    entries.length > MAX_RENDERED ? entries.slice(entries.length - MAX_RENDERED) : entries;
+  const following = useRef(true);
+  const [showLatest, setShowLatest] = useState(false);
+  const visibleEntries = entries.slice(-300);
 
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    if (!ref.current) return;
+    if (following.current) ref.current.scrollTop = ref.current.scrollHeight;
+    else setShowLatest(true);
   }, [entries]);
 
-  // Linhas com a senha ainda sendo apurada no servidor também animam.
-  const hasPending = visibleEntries.some((e) => e.pending);
-
-  useEffect(() => {
-    if (!isMonitoring && !hasPending) return;
-    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-    const id = setInterval(() => setSpinIdx((i) => (i + 1) % SPINNER.length), 180);
-    return () => clearInterval(id);
-  }, [isMonitoring, hasPending]);
-
-  // Index of the latest "Monitoramento iniciado" entry (animated only while monitoring).
-  let animatedId: string | number | null = null;
-  for (let i = visibleEntries.length - 1; i >= 0; i--) {
-    if (MONITOR_START_RE.test(visibleEntries[i].msg)) {
-      animatedId = visibleEntries[i].id;
-      break;
-    }
+  function jumpToLatest() {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    following.current = true;
+    setShowLatest(false);
   }
 
   return (
-    <div className="site-glass overflow-hidden rounded-lg border border-border bg-background">
-      <div className="flex items-center gap-2 border-b border-border bg-muted/70 px-3 py-2">
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="h-3 w-3 rounded-full"
-            animate={
-              isMonitoring && !reduce
-                ? {
-                    backgroundColor: ["#525252", "#737373", "#FFFFFF", "#737373", "#525252"],
-                  }
-                : { backgroundColor: "#525252" }
-            }
-            transition={{
-              duration: isMonitoring && !reduce ? 1.2 : 0.55,
-              repeat: isMonitoring && !reduce ? Infinity : 0,
-              delay: isMonitoring && !reduce ? i * 0.3 : 0,
-              times: isMonitoring && !reduce ? [0, 0.25, 0.5, 0.75, 1] : undefined,
-              ease: "easeInOut",
-            }}
+    <section
+      className="sb-panel relative overflow-hidden"
+      aria-label="Histórico de eventos do atendimento"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <Activity className="size-4 text-muted-foreground" aria-hidden />
+          <span className="text-xs font-medium">Histórico do atendimento</span>
+          <span className="text-[10px] tabular-nums text-muted-foreground">
+            {entries.length} {entries.length === 1 ? "evento" : "eventos"}
+          </span>
+        </div>
+        <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span
+            className={`size-1.5 rounded-full ${isMonitoring ? "bg-success motion-safe:animate-pulse" : "bg-muted-foreground/50"}`}
+            aria-hidden
           />
-        ))}
-      </div>
+          {isMonitoring ? "Monitoramento em andamento" : "Monitoramento parado"}
+        </span>
+      </header>
       <div
         ref={ref}
-        onWheel={(e) => {
-          // Deixa o scroll subir pro container pai quando este log já está no
-          // topo/fundo ou não tem overflow. Sem isso, passar o mouse em cima
-          // do log trava o scroll da página em atendimento multi.
-          const el = e.currentTarget;
-          const atTop = el.scrollTop <= 0;
-          const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-          const canScroll = el.scrollHeight > el.clientHeight + 1;
-          if (!canScroll || (e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
-            // Não consome — deixa o scroll seguir pra página.
-            return;
-          }
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        tabIndex={0}
+        aria-label="Eventos mais recentes"
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          following.current = element.scrollHeight - element.scrollTop - element.clientHeight < 32;
+          if (following.current) setShowLatest(false);
         }}
-        className="h-72 overflow-y-auto bg-transparent p-3 font-mono text-xs leading-relaxed"
+        className="h-80 overflow-y-auto overscroll-auto px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
-      {visibleEntries.length > 0 && (
-        <AnimatePresence initial={false}>
-          {visibleEntries.map((e) => {
-            const isAnimated = isMonitoring && e.id === animatedId;
-            const prefix = isAnimated ? SPINNER[spinIdx] : ">";
-            return (
-              <motion.div
-                key={e.id}
-                initial={reduce ? false : { opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.25, ease: easeClaude }}
-                className={`${colors[e.level]} flex items-start gap-1.5`}
-              >
-                <span className="shrink-0 font-bold text-white tabular-nums w-3 text-center" style={{ textShadow: "0 0 8px rgba(255,255,255,0.55)" }}>
-                  {prefix}
-                </span>
-                <span>
-                  {showTime && (
-                    <>
-                      <span className="text-muted-foreground/60">[{formatBrasiliaHMS(new Date(e.ts))}]</span>{" "}
-                    </>
+        {visibleEntries.length ? (
+          <ol className="space-y-0">
+            {visibleEntries.map((entry, index) => {
+              const { label, Icon, color, border } = levels[entry.level];
+              return (
+                <li key={entry.id} className="relative flex gap-3 pb-5 last:pb-0">
+                  {index < visibleEntries.length - 1 && (
+                    <span
+                      className="absolute bottom-0 left-[13px] top-7 w-px bg-border"
+                      aria-hidden
+                    />
                   )}
-                  {e.pending && e.msg.includes("…")
-                    ? e.msg.replace("…", SPINNER[spinIdx])
-                    : e.msg}
-                </span>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      )}
+                  <span
+                    className={`relative z-10 grid size-7 shrink-0 place-items-center rounded-full border bg-card ${border} ${color}`}
+                  >
+                    {entry.pending ? (
+                      <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden />
+                    ) : (
+                      <Icon className="size-3.5" aria-hidden />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className={`text-[10px] font-medium ${color}`}>
+                        {entry.pending ? "Em apuração" : label}
+                      </span>
+                      {showTime && (
+                        <time
+                          dateTime={new Date(entry.ts).toISOString()}
+                          className="text-[10px] tabular-nums text-muted-foreground"
+                        >
+                          {formatBrasiliaHMS(new Date(entry.ts))}
+                          <span className="sr-only">, horário de Brasília</span>
+                        </time>
+                      )}
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-xs leading-6 text-foreground/85">
+                      {entry.msg}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <Activity className="size-7 text-muted-foreground" strokeWidth={1.3} aria-hidden />
+            <p className="mt-4 text-sm font-medium">Os eventos aparecerão aqui</p>
+            <p className="mt-2 max-w-xs text-xs leading-6 text-muted-foreground">
+              {isMonitoring
+                ? "Aguardando atualizações do monitoramento."
+                : "Ao iniciar o atendimento, acompanhe a conexão, o envio e a apuração da senha."}
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+      {(entries.length > 300 || showLatest) && (
+        <footer className="flex items-center justify-between gap-3 border-t border-border px-5 py-2.5 text-[10px] text-muted-foreground">
+          <span>
+            {entries.length > 300
+              ? "Exibindo os 300 eventos mais recentes"
+              : "O histórico foi atualizado"}
+          </span>
+          {showLatest && (
+            <button
+              type="button"
+              onClick={jumpToLatest}
+              className="inline-flex min-h-8 items-center gap-1.5 text-foreground"
+            >
+              <ArrowDown className="size-3" aria-hidden />
+              Ir ao mais recente
+            </button>
+          )}
+        </footer>
+      )}
+    </section>
   );
-
 }

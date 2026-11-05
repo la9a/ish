@@ -4,11 +4,12 @@ Painel de atendimento de clientes e monitoramento de rascunhos em grupos do Tele
 
 ## Redesign
 
-Interface preta e branca com ilustrações originais de gatos, navegação simplificada, clientes com busca/filtro, cadastro e monitoramento responsivos. Sem personalização de perfil e sem CAPTCHA Turnstile; autenticação e limites de tentativas continuam ativos.
+Interface preta e branca com banners de gatos por área. Monitoramento, conexões, cadastro, etapas de autorização, seleção múltipla e modais redesenhados; menus customizados por Radix e textos objetivos. Sem personalização de perfil e sem CAPTCHA Turnstile; autenticação e limites de tentativas continuam ativos.
 
 - [Baixar ZIP completo](releases/senhabaixa-redesign.zip)
 - [Prompt para o Lovable](docs/LOVABLE_PROMPT.md)
-- [Ver o painel desktop](docs/preview/dashboard-desktop.png) · [Celular](docs/preview/dashboard-mobile.png) · [Login](docs/preview/login-desktop.png)
+- [Galeria de todas as telas](docs/preview/README.md)
+- [Monitoramento](docs/preview/monitoramento-desktop.png) · [Conexões](docs/preview/conexoes-desktop.png) · [Cadastro](docs/preview/cadastro-desktop.png)
 - [Testes e limitações](docs/VALIDATION.md)
 
 As capturas usam dados fictícios de teste, sem acessar produção.

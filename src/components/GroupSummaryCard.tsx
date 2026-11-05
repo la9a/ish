@@ -1,3 +1,4 @@
+import { FileText, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TgAvatar } from "@/components/TgAvatar";
@@ -28,32 +29,89 @@ export function GroupSummaryCard({
   onEdit,
   onRemove,
 }: GroupSummaryCardProps) {
+  const label = censorName ? "este grupo" : group.name;
   return (
-    <div className="hairline flex min-h-[66px] items-center gap-3 rounded-xl p-3">
-      {showIcon && (
-        group.photoUrl ? (
-          <img
-            src={group.photoUrl}
-            alt={group.name}
-            className={`size-10 shrink-0 rounded-lg object-cover hairline ${censorPhoto ? "censor-text" : ""}`}
-          />
-        ) : (
-          <TgAvatar name={group.name} single className={`size-10 shrink-0 rounded-lg text-sm ${censorPhoto ? "censor-text" : ""}`} />
-        )
-      )}
-      <div className="min-w-0 flex-1 self-center">
-        <div className={`truncate text-sm font-medium ${censorName ? "censor-text" : ""}`}>{group.name}</div>
-        <div className={`truncate font-mono text-[12px] text-readable-muted ${censorDraft ? "censor-text" : ""}`}>
-          "{group.message.slice(0, 80)}{group.message.length > 80 ? "…" : ""}"
+    <article
+      className={`overflow-hidden rounded-lg border border-border bg-background ${group.active ? "" : "opacity-70"}`}
+    >
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+        {showIcon &&
+          (group.photoUrl ? (
+            <img
+              src={group.photoUrl}
+              alt=""
+              className={`size-9 shrink-0 rounded-full object-cover ${censorPhoto ? "censor-text" : ""}`}
+            />
+          ) : (
+            <TgAvatar
+              name={group.name}
+              single
+              className={`size-9 shrink-0 rounded-full text-xs ${censorPhoto ? "censor-text" : ""}`}
+            />
+          ))}
+        <div className="min-w-0 flex-1 basis-28">
+          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <MessageCircle className="size-3" aria-hidden /> Grupo Telegram
+          </span>
+          <h4 className={`mt-1 truncate text-sm font-medium ${censorName ? "censor-text" : ""}`}>
+            {group.name}
+          </h4>
         </div>
+        <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span
+            className={`size-1.5 rounded-full ${group.active ? "bg-foreground" : "bg-muted-foreground/50"}`}
+            aria-hidden
+          />
+          {group.active ? "Habilitado para envio" : "Envio desativado"}
+        </span>
+      </div>
+      <div className="border-t border-border px-4 py-3">
+        <p className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <FileText className="size-3" aria-hidden /> Rascunho
+        </p>
+        <p
+          className={`mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 ${censorDraft ? "censor-text" : ""} ${group.message.trim() ? "text-foreground/85" : "text-muted-foreground"}`}
+        >
+          {group.message.trim() ? group.message : "Nenhum rascunho cadastrado."}
+        </p>
       </div>
       {editing && (
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-          <Switch checked={group.active} onCheckedChange={onToggle} disabled={disabled} />
-          <Button variant="ghost" size="sm" onClick={onEdit} disabled={disabled}>Editar</Button>
-          <Button variant="ghost" size="sm" onClick={onRemove} disabled={disabled}>Remover</Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5">
+          <label className="flex items-center gap-2.5 text-xs text-muted-foreground">
+            <Switch
+              checked={group.active}
+              onCheckedChange={onToggle}
+              disabled={disabled}
+              aria-label={`Habilitar envio para ${label}`}
+            />
+            Enviar neste grupo
+          </label>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEdit}
+              disabled={disabled}
+              className="h-9 gap-1.5 text-xs"
+              aria-label={`Editar grupo e rascunho de ${label}`}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              disabled={disabled}
+              className="h-9 gap-1.5 text-xs text-danger"
+              aria-label={`Remover ${label}`}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+              Remover
+            </Button>
+          </div>
         </div>
       )}
-    </div>
+    </article>
   );
 }

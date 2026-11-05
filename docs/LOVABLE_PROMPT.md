@@ -25,6 +25,29 @@ Substitua o visual antigo integralmente. A referência de linguagem é o Pierre:
 - Cadastro, modais de grupos/rascunhos, monitoramento, eventos e confirmações devem seguir o mesmo sistema visual.
 - Layout responsivo em 360 px, tablet e desktop; sem rolagem horizontal. Botões confortáveis no celular. Navegação por teclado, foco visível, rótulos de formulário e respeito a movimento reduzido.
 
+## Revisão obrigatória de todas as telas
+
+Não preserve a composição antiga de nenhuma aba. Trocar apenas o cabeçalho ou as cores não conclui o redesign. Aplique os novos layouts do ZIP à visão geral, lista de clientes, **conexões, cadastro em todas as etapas, monitoramento único, seleção e monitoramento múltiplo**, modais de grupos/rascunhos e opções de envio.
+
+- Use os banners originais por contexto: `cat-connect.svg` nas conexões, `cat-register.svg` no cadastro e `cat-monitor.svg` nos atendimentos. Mantenha os gatos coloridos e o restante da interface predominantemente preto e branco.
+- O monitoramento deve usar a nova organização de operação: resumo/controles, clientes e grupos, rascunho legível e histórico de eventos. Não reutilize a aparência de terminal antigo nem os antigos cartões empilhados.
+- Conexões deve ter busca, filtro customizado, resumo das contas e ações claras de editar, reconectar e desconectar, com resultados reais das verificações.
+- O cadastro precisa de formulário compacto, etapas claras e conteúdo lateral útil à etapa atual; nada de um pequeno formulário perdido em um grande espaço vazio. Preserve o fluxo real de código e 2FA. Recarregar uma etapa deve recuperar uma sessão pendente válida ou mostrar uma orientação; nunca deixar o botão de confirmar sem efeito.
+- Substitua as listas nativas visíveis do navegador por **Select/Popover/Command do Radix** em todos os dropdowns. O filtro de clientes deve ter menu escuro desenhado pelo app, com item selecionado, foco e operação por teclado, assim como a lista de países/DDIs no cadastro. Os inputs de data/hora continuam com seu comportamento adequado ao dispositivo.
+- Escreva português simples e objetivo, com nomes e instruções concretos: “Conexões”, “Buscar cliente”, “Confirmar código”, “Editar rascunho”. Remova slogans como “Organização é coisa de quem cuida”, “Toda a sua atenção”, “Do seu jeito” e “Menos correria, mais controle”. Não preencha espaço com frases publicitárias.
+
+## CSS obrigatório para o badge
+
+Inclua **obrigatoriamente no CSS global**, exatamente este código, preservando-o em toda atualização:
+
+```css
+#lovable-badge {
+  display: none !important;
+}
+```
+
+Este trecho precisa estar no arquivo CSS entregue, e não apenas em um comentário, resposta ou exemplo.
+
 ## Remover o CAPTCHA do aplicativo
 
 Remova a integração **Cloudflare Turnstile** de ponta a ponta: widget, scripts externos, obtenção de site key, tokens, parâmetros de login, chamadas de verificação e helpers que ficarem sem uso. O login deve continuar funcionando quando TURNSTILE_SITE_KEY e TURNSTILE_SECRET_KEY não estiverem definidos.
@@ -61,7 +84,10 @@ Caso existam diferenças entre os arquivos do ZIP e o projeto ativo, integre as 
 - Verificar login válido, chave inválida, limites de tentativas e logout no ambiente com segredos reais.
 - Verificar com duas contas de teste que um operador não lê nem altera as clientes e rascunhos do outro, inclusive acessando URLs diretamente.
 - Conferir busca, adicionar/reconectar cliente, editar rascunho, modais, atendimento único e múltiplo, estados vazios e falha do agente.
-- Conferir mobile e desktop, foco por teclado, ausência de assets quebrados e ausência do widget/requisições Turnstile.
+- Conferir mobile e desktop em cada tela, incluindo o painel ativo de monitoramento, conexões e todas as etapas de cadastro, e registrar capturas. Não considerar apenas a home como prova do redesign completo.
+- Conferir menus customizados: abrir o filtro de clientes, selecionar pelo teclado, conferir busca, foco visível e seleção; nenhum dropdown visível deve usar a listagem nativa do navegador.
+- Confirmar `#lovable-badge { display: none !important; }` no CSS global.
+- Conferir ausência de assets quebrados e do widget/requisições Turnstile.
 - Testes de envio real só em um grupo de teste autorizado; não enviar para grupos de clientes de produção durante esta atualização visual.
 
 Ao terminar, apresente o que foi integrado, os testes executados e qualquer configuração externa pendente. Não afirme que login, Telegram ou VPS foram validados se os segredos ou serviços não estavam disponíveis.
