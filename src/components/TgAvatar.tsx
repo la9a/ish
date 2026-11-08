@@ -1,28 +1,25 @@
-// Ícone padrão de grupo (sem moldura): usado quando não há foto carregada.
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+import { cn } from "@/lib/utils";
 
-import { MessageCircle } from "lucide-react";
-
+/** A new geometric group tile for Telegram groups without a photo. */
 export function TgAvatar({
   className = "",
-  single = false,
 }: {
   name?: string | null;
   className?: string;
-  /** mantido para compatibilidade */
   single?: boolean;
 }) {
-  // Ignora classes de container (tamanho/borda/raio) vindas de fora.
-  const keep = className
-    .split(" ")
-    .filter((c) => c === "censor-text" || c === "shrink-0")
-    .join(" ");
   return (
-    <MessageCircle
-      className={`size-6 shrink-0 text-white/90 select-none ${keep}`}
-      strokeWidth={2}
-      aria-hidden
-    />
+    <span
+      data-avatar="group"
+      aria-hidden="true"
+      className={cn(
+        "inline-flex size-10 shrink-0 select-none items-center justify-center rounded-xl border border-[#46434c] bg-[#222126] text-[#d6cfdf]",
+        className,
+      )}
+    >
+      <WorkspaceIcon variant="group" className="size-5" />
+    </span>
   );
 }
-
 export default TgAvatar;

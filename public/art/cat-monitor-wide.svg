@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="440" viewBox="0 0 1600 440" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Olho no movimento</title>
+  <desc id="desc">Gato lilás com grandes fones pretos acompanha uma linha de atividade em uma tela, em uma composição pêssego, violeta e creme.</desc>
+  <defs>
+    <linearGradient id="bg" x1="45" y1="0" x2="981" y2="576" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9D3B7" />
+      <stop offset=".5" stop-color="#F6BDB9" />
+      <stop offset="1" stop-color="#B5A0DF" />
+    </linearGradient>
+    <linearGradient id="fur" x1="563" y1="143" x2="795" y2="519" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DCCAF4" />
+      <stop offset=".58" stop-color="#BEA0DF" />
+      <stop offset="1" stop-color="#9271B8" />
+    </linearGradient>
+    <linearGradient id="pad" x1="506" y1="258" x2="578" y2="384" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4A4053" />
+      <stop offset="1" stop-color="#17151E" />
+    </linearGradient>
+    <linearGradient id="screen" x1="499" y1="455" x2="874" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#302637" />
+      <stop offset="1" stop-color="#191A22" />
+    </linearGradient>
+    <pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#705080" fill-opacity=".19" />
+    </pattern>
+    <linearGradient id="wide-bg" x1="0" y1="10" x2="1600" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F9D3B7" />
+      <stop offset=".48" stop-color="#F6BDB9" />
+      <stop offset="1" stop-color="#B5A0DF" />
+    </linearGradient>
+    <radialGradient id="wide-light" cx="0" cy="0" r="1" gradientTransform="translate(610 115) rotate(10) scale(950 500)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF1E1" stop-opacity=".22" />
+      <stop offset="1" stop-color="#FFF1E1" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="wide-canvas">
+      <rect width="1600" height="440" />
+    </clipPath>
+    <pattern id="wide-grain" width="11" height="11" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r=".8" fill="#78586E" fill-opacity=".08" />
+    </pattern>
+  </defs>
+  <g clip-path="url(#wide-canvas)">
+    <rect width="1600" height="440" fill="url(#wide-bg)" />
+    <rect width="1600" height="440" fill="url(#wide-light)" />
+    <circle cx="1610" cy="-95" r="278" fill="#DAC9F1" />
+    <circle cx="-87" cy="558" r="299" fill="#FFF1E1" fill-opacity=".48" />
+    <circle cx="888" cy="-178" r="300" fill="#FFF1E1" fill-opacity=".13" />
+    <rect width="1600" height="440" fill="url(#wide-grain)" />
+    <path d="M-120 182C187-4 525 18 848 147C1090 244 1362 267 1722 95" stroke="#FFF1E1" stroke-opacity=".43" stroke-width="1.4" />
+    <path d="M-145 209C164 20 518 46 844 177C1090 277 1373 296 1710 135" stroke="#FFF1E1" stroke-opacity=".23" stroke-width="1.4" />
+    <path d="M-70 414C345 481 674 302 1002 309C1271 315 1392 454 1665 407" stroke="#FFF1E1" stroke-opacity=".3" stroke-width="1.4" />
+    <ellipse cx="1192" cy="241" rx="384" ry="140" transform="rotate(-15 1192 241)" stroke="#78586E" stroke-opacity=".25" stroke-width="1" />
+    <circle cx="162" cy="48" r="4" fill="#FFF1E1" fill-opacity=".8" />
+    <circle cx="860" cy="381" r="5" fill="#78586E" fill-opacity=".35" />
+    <circle cx="1534" cy="332" r="5" fill="#78586E" fill-opacity=".7" />
+    <circle cx="1079" cy="53" r="3" fill="#FFF1E1" fill-opacity=".9" />
+    <path d="M65 309L70.0 324.0L85 329L70.0 334.0L65 349L60.0 334.0L45 329L60.0 324.0Z" fill="#FFF1E1" fill-opacity=".7" />
+    <path d="M930 40L934.5 53.5L948 58L934.5 62.5L930 76L925.5 62.5L912 58L925.5 53.5Z" fill="#FFF1E1" fill-opacity=".7" />
+    <path d="M1543 69L1549.0 87.0L1567 93L1549.0 99.0L1543 117L1537.0 99.0L1519 93L1537.0 87.0Z" fill="#78586E" fill-opacity=".7" />
+    <g id="cat-scene" transform="translate(914 8) scale(.58)">
+      <path d="M793 448C905 426 930 491 900 524C882 543 854 520 867 505" stroke="#8E6CB0" stroke-width="40" stroke-linecap="round" />
+      <path d="M610 412C553 450 535 519 544 630H860C871 527 844 452 791 422L610 412Z" fill="url(#fur)" />
+      <path d="M643 454C617 497 612 551 621 605H764C769 550 750 500 725 464" fill="#E3D1F4" />
+      <path d="M530 313C509 158 580 91 688 99C806 108 875 192 850 332" stroke="#25212C" stroke-width="28" stroke-linecap="round" />
+      <path d="M532 271C522 152 598 100 678 108C778 113 850 172 849 275" stroke="#66566E" stroke-width="4" stroke-linecap="round" />
+      <path d="M549 279C533 234 540 171 552 132C581 138 611 165 630 195C671 181 720 184 752 199C774 172 809 151 835 149C846 193 842 250 826 287C853 319 853 360 833 395C808 440 758 462 702 464C641 467 582 440 552 401C525 368 525 316 549 279Z" fill="url(#fur)" />
+      <path d="M552 254C550 220 553 183 561 159C581 171 598 188 608 208C582 220 563 238 552 254ZM773 215C789 194 807 180 824 174C831 204 829 236 819 264C806 243 793 226 773 215Z" fill="#EBAEC7" />
+      <path d="M633 194L648 238M682 187L676 232M728 194L709 234" stroke="#9C78BF" stroke-width="10" stroke-linecap="round" />
+      <path d="M542 327L565 339L542 351M835 330L814 343L838 352" stroke="#8F6AAD" stroke-width="10" stroke-linecap="round" />
+      <path d="M626 327C640 307 658 307 671 325M720 327C734 309 754 312 765 332" stroke="#33293F" stroke-width="6" stroke-linecap="round" />
+      <path d="M632 325L637 326M727 327L732 328" stroke="#FCF6E6" stroke-width="3" stroke-linecap="round" />
+      <ellipse cx="674" cy="375" rx="33" ry="24" fill="#E8D8F4" />
+      <ellipse cx="719" cy="377" rx="33" ry="24" fill="#E8D8F4" />
+      <path d="M683 352C691 347 701 348 709 355C708 361 701 367 695 368C689 365 683 359 683 352Z" fill="#705080" />
+      <path d="M695 368V381M695 381C688 390 680 390 674 385M695 381C702 392 710 392 716 387" stroke="#6D4E7A" stroke-width="2.5" stroke-linecap="round" />
+      <g stroke="#745184" stroke-width="1.6" stroke-linecap="round">
+        <path d="M654 372C620 360 594 362 568 366M652 383C615 378 593 385 570 393M739 374C772 365 796 370 821 378M739 383C775 384 794 396 814 406" />
+      </g>
+      <g stroke="#F2DDFB" stroke-width="2.2" stroke-linecap="round">
+        <path d="M555 151L553 170M563 157L564 177M825 164L823 185M831 178L827 198M541 286L532 300M542 296L533 310M831 282L840 296M834 295L843 309M609 437L616 447M619 442L627 453M765 450L760 461" />
+      </g>
+      <rect x="518" y="263" width="51" height="113" rx="25" transform="rotate(-8 518 263)" fill="#181720" />
+      <rect x="512" y="271" width="33" height="97" rx="16" transform="rotate(-8 512 271)" fill="url(#pad)" />
+      <path d="M523 284L521 343" stroke="#7E6989" stroke-width="2" stroke-linecap="round" />
+      <rect x="816" y="272" width="48" height="113" rx="24" transform="rotate(8 816 272)" fill="#17161E" />
+      <rect x="837" y="280" width="33" height="96" rx="16" transform="rotate(8 837 280)" fill="url(#pad)" />
+      <path d="M850 296L849 352" stroke="#7D6C87" stroke-width="2" stroke-linecap="round" />
+      <path d="M839 378C858 424 844 446 805 449" stroke="#27232E" stroke-width="5" stroke-linecap="round" />
+      <rect x="781" y="442" width="31" height="14" rx="7" transform="rotate(-5 781 442)" fill="#2A2532" />
+      <path d="M497 445C496 434 505 424 516 424H867C878 424 887 434 886 445L874 581H509L497 445Z" fill="url(#screen)" />
+      <rect x="518" y="442" width="348" height="119" rx="6" stroke="#65516F" />
+      <path d="M538 503H582L597 485L613 523L634 475L652 505H696L711 490L726 511L744 483L762 503H845" stroke="#D9F3B1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M525 570H856" stroke="#897394" stroke-opacity=".5" />
+      <path d="M469 580H912L945 604H435L469 580Z" fill="#24212D" />
+      <path d="M615 585H766L777 593H604L615 585Z" fill="#56425F" />
+      <path d="M571 442C554 429 534 433 534 450C534 470 553 487 576 484C591 482 591 470 582 459L571 442ZM811 441C830 429 848 436 847 453C847 471 828 488 809 484C793 481 795 467 805 457L811 441Z" fill="#C1A0DE" />
+      <path d="M546 450L555 460M554 444L563 454M829 449L821 459M838 453L830 463" stroke="#9976BA" stroke-width="2" stroke-linecap="round" />
+      <path d="M444 380C423 425 456 455 506 454M880 235C931 231 957 248 960 275" stroke="#FFF2DE" stroke-width="2" stroke-linecap="round" />
+      <circle cx="453" cy="438" r="6" fill="#FFF3DF" />
+    </g>
+    <path d="M1073 337C1046 372 1089 398 1150 382M1462 123C1510 106 1557 117 1575 146" stroke="#FFF1E1" stroke-width="1.8" stroke-opacity=".7" stroke-linecap="round" />
+  </g>
+</svg>

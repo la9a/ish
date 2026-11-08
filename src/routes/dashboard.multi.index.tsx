@@ -1,4 +1,5 @@
 import { PageBanner } from "@/components/PageBanner";
+import { clientPreparation } from "@/lib/clientPreparation";
 import { AdminLayout } from "./admin";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -24,13 +25,11 @@ import {
   Play,
   Square,
   Settings as SettingsIcon,
-  Activity,
   Search,
   ArrowUpRight,
   Pin,
   PinOff,
   Plus,
-  Users,
 } from "lucide-react";
 import { MonitorLog } from "@/components/MonitorLog";
 import { AddGroupModal } from "@/components/AddGroupModal";
@@ -45,6 +44,8 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { MonitorSettingsPanel } from "@/components/MonitorSettingsPanel";
 import { GroupSummaryCard } from "@/components/GroupSummaryCard";
 import { MonitorClientCard } from "@/components/MonitorClientCard";
+import { MonitoringWorkspace } from "@/components/MonitoringWorkspace";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 import { ScheduleTimeCard } from "@/components/ScheduleTimeCard";
 export const Route = createFileRoute("/dashboard/multi/")({
   head: () => ({
@@ -269,6 +270,9 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
   }
 
   const eligible = clients.filter((c) => c.hasSession);
+  const preparedClients = eligible.filter(
+    (client) => clientPreparation(client, clientData.getGroups(client.id)).ready,
+  );
   const filteredEligible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const base = q
@@ -351,10 +355,13 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
       return (
         <div
           key={c.id}
-          className={`flex items-center gap-3 rounded-xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-ring ${checked ? "border-foreground bg-white/[.05]" : "border-border bg-background/40 hover:border-foreground/40"} ${disabled ? "opacity-40" : ""}`}
+          data-selection-item="multi"
+          data-selected={checked}
+          className={`sb-multi-client-option flex min-w-0 items-center gap-2 rounded-xl p-3 sm:gap-3 sm:p-4 ${checked ? "bg-white/[.05]" : "bg-background/40"} ${disabled ? "opacity-40" : ""}`}
         >
           <label
-            className={`flex min-w-0 flex-1 items-center gap-3 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+            data-client-option-content=""
+            className={`grid min-w-0 flex-1 grid-cols-[1rem_2.5rem_minmax(0,1fr)] items-center gap-x-2.5 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             <input
               type="checkbox"
@@ -362,25 +369,26 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               disabled={disabled}
               onChange={() => toggle(c)}
               aria-label={`Selecionar ${c.title}`}
-              className="size-4 shrink-0 accent-white"
+              className="col-start-1 row-span-2 row-start-1 size-4 self-center accent-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             />
-            <ClientAvatar name={c.title} />
-            <span className="min-w-0 flex-1">
-              <span
-                className={`block truncate text-sm font-medium ${settings.censorClientTitle ? "censor-text" : ""}`}
-              >
-                {c.title}
-              </span>
-              <span className="mt-1 block text-[10px] text-muted-foreground">
-                {groupCount} {groupCount === 1 ? "grupo ativo" : "grupos ativos"}
-                {c.scheduleEnv ? ` · ${c.scheduleEnv}` : ""}
-              </span>
+            <span className="col-start-2 row-span-2 row-start-1 self-center">
+              <ClientAvatar name={c.title} />
+            </span>
+            <span
+              data-client-title="available"
+              className={`col-start-3 row-start-1 block min-w-0 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-medium leading-5 ${settings.censorClientTitle ? "censor-text" : ""}`}
+            >
+              {c.title}
+            </span>
+            <span className="col-start-3 row-start-2 mt-1 block text-[10px] text-muted-foreground">
+              {groupCount} {groupCount === 1 ? "grupo ativo" : "grupos ativos"}
+              {c.scheduleEnv ? ` · ${c.scheduleEnv}` : ""}
             </span>
           </label>
           <button
             type="button"
             onClick={(event) => togglePin(c, event)}
-            className={`grid size-9 place-items-center rounded-lg hover:bg-white/5 ${c.pinned ? "text-foreground" : "text-muted-foreground"}`}
+            className={`sb-pin-toggle grid size-9 shrink-0 place-items-center rounded-lg hover:bg-white/5 ${c.pinned ? "text-foreground" : "text-muted-foreground"}`}
             aria-label={`${c.pinned ? "Desafixar" : "Fixar"} ${c.title}`}
             aria-pressed={Boolean(c.pinned)}
           >
@@ -393,11 +401,17 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
       <main className="sb-page">
         <div className="mx-auto max-w-7xl">
           <PageBanner
-            image="/art/cat-monitor.svg"
-            eyebrow="ATENDIMENTO MÚLTIPLO"
-            title="Selecionar clientes"
+            image="/art/cat-multi-select.svg"
+            eyebrow="ATENDIMENTO MULTI"
+            title="Atendimento multi"
             description={`Escolha de 2 a ${MAX} contas conectadas para o monitoramento simultâneo.`}
             tone="lilac"
+            highlights={[
+              { label: "Sessões salvas", value: eligible.length },
+              { label: "Preparadas", value: preparedClients.length },
+              { label: "Selecionadas", value: `${selected.size} / ${MAX}` },
+            ]}
+            hint="Cada cliente usa os próprios grupos e rascunhos. A seleção não inicia o envio."
           >
             <button
               type="button"
@@ -406,6 +420,16 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
             >
               <Plus className="size-4" aria-hidden />
               Nova cliente
+            </button>
+            <button
+              type="button"
+              className="sb-button"
+              disabled={!preparedClients.length}
+              onClick={() =>
+                setSelected(new Set(preparedClients.slice(0, MAX).map((client) => client.id)))
+              }
+            >
+              Selecionar preparadas
             </button>
           </PageBanner>
           <div className="sb-monitor-strip" aria-label="Resumo das contas">
@@ -427,7 +451,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
             {clients.length > eligible.length && (
               <button
                 type="button"
-                className="text-xs text-muted-foreground underline underline-offset-4"
+                className="sb-text-action text-xs text-muted-foreground underline underline-offset-4"
                 onClick={() => navigate({ to: "/admin/connection" })}
               >
                 {clients.length - eligible.length}{" "}
@@ -437,7 +461,10 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
             )}
           </div>
           <div className="sb-workspace-grid">
-            <section className="sb-panel min-w-0" aria-labelledby="select-clients-heading">
+            <section
+              className="sb-panel @container min-w-0"
+              aria-labelledby="select-clients-heading"
+            >
               <div className="sb-section-head">
                 <h2 id="select-clients-heading" className="text-base font-medium">
                   Contas disponíveis
@@ -465,10 +492,9 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               <div className="p-4 sm:p-5">
                 {!eligible.length ? (
                   <div className="py-10 text-center">
-                    <Users
+                    <WorkspaceIcon
+                      variant="connections"
                       className="mx-auto size-8 text-muted-foreground"
-                      strokeWidth={1.3}
-                      aria-hidden
                     />
                     <h3 className="mt-4 text-base">Nenhuma conta conectada</h3>
                     <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-muted-foreground">
@@ -498,7 +524,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                           <Pin className="size-3" aria-hidden />
                           Fixadas
                         </h3>
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="grid min-w-0 gap-3 @min-[40rem]:grid-cols-2">
                           {pinnedList.map(renderClient)}
                         </div>
                       </div>
@@ -510,7 +536,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                             Outras clientes
                           </h3>
                         )}
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="grid min-w-0 gap-3 @min-[40rem]:grid-cols-2">
                           {otherList.map(renderClient)}
                         </div>
                       </div>
@@ -533,24 +559,33 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                 <span className="sb-number">{String(selected.size).padStart(2, "0")}</span>
               </div>
               <div className="p-5">
+                <button
+                  type="button"
+                  className="sb-text-action mb-4 text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-40"
+                  disabled={!selected.size}
+                  onClick={() => setSelected(new Set())}
+                >
+                  Limpar seleção
+                </button>
                 {selectedList.length ? (
                   <ol className="space-y-3">
                     {selectedList.map((c, index) => (
                       <li
                         key={c.id}
-                        className="flex items-center gap-3 border-b border-border pb-3"
+                        className="flex min-w-0 items-start gap-3 border-b border-border pb-3"
                       >
-                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <span
-                          className={`min-w-0 flex-1 truncate text-xs ${settings.censorClientTitle ? "censor-text" : ""}`}
+                          data-client-title="selected"
+                          className={`min-w-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere] text-xs leading-5 ${settings.censorClientTitle ? "censor-text" : ""}`}
                         >
                           {c.title}
                         </span>
                         <button
                           type="button"
-                          className="text-[10px] text-muted-foreground hover:text-foreground"
+                          className="shrink-0 text-[10px] text-muted-foreground hover:text-foreground"
                           onClick={() => toggle(c)}
                           aria-label={`Remover ${c.title} da seleção`}
                         >
@@ -561,10 +596,9 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                   </ol>
                 ) : (
                   <div className="rounded-xl border border-dashed border-border px-5 py-9 text-center">
-                    <Users
+                    <WorkspaceIcon
+                      variant="multi"
                       className="mx-auto size-6 text-muted-foreground"
-                      strokeWidth={1.2}
-                      aria-hidden
                     />
                     <p className="mt-3 text-xs text-muted-foreground">
                       As clientes selecionadas aparecem aqui.
@@ -606,12 +640,17 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
     <main className="sb-page">
       <div className="mx-auto max-w-7xl">
         <PageBanner
-          image="/art/cat-monitor.svg"
+          image="/art/cat-multi.svg"
           compact
           eyebrow="ATENDIMENTO MÚLTIPLO"
           title="Monitoramento"
-          description="Confira os grupos e rascunhos de cada cliente e acompanhe os eventos da operação."
+          description="Confira os grupos e rascunhos das clientes antes de iniciar."
           tone="lilac"
+          highlights={[
+            { label: "Clientes", value: selectedList.length },
+            { label: "Estado", value: running ? "Em execução" : "Parado" },
+          ]}
+          hint="Acompanhe a confirmação de envio e a apuração da senha nos eventos de cada cliente."
         >
           <button
             type="button"
@@ -631,8 +670,11 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
             Alterar seleção
           </button>
         </PageBanner>
-        <section className="sb-monitor-strip" aria-label="Controles do monitoramento múltiplo">
-          <div className="flex flex-wrap items-center gap-5">
+        <section
+          className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 min-[1100px]:flex min-[1100px]:items-center min-[1100px]:justify-between"
+          aria-label="Controles do monitoramento múltiplo"
+        >
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 min-[1100px]:justify-start min-[1100px]:gap-5">
             <span className={`sb-live-chip ${running ? "is-live" : ""}`} role="status">
               <span aria-hidden />
               {running ? "Em execução" : "Parado"}
@@ -660,7 +702,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 [&>div:first-child]:mr-auto min-[1100px]:[&>div:first-child]:mr-0">
             <BrasiliaClock />
             <Button
               type="button"
@@ -676,7 +718,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
             {running ? (
               <Button
                 onClick={() => multiMonitor.stop("manual")}
-                className="rounded-xl h-10 w-28 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 shadow-none"
+                className="rounded-xl h-10 w-24 sm:w-28 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 shadow-none"
               >
                 <Square className="size-3.5 fill-white" strokeWidth={0} /> Parar
               </Button>
@@ -684,27 +726,18 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
               <Button
                 onClick={start}
                 disabled={!miamiReady || prewarming || !hasAnyActiveGroup}
-                className="rounded-xl h-10 w-28 bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 disabled:opacity-40"
+                className="rounded-xl h-10 w-24 sm:w-28 bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 disabled:opacity-40"
               >
                 <Play className="size-3.5 fill-neutral-900" strokeWidth={0} /> Iniciar
               </Button>
             )}
           </div>
         </section>
-        <div className="sb-workspace-grid">
-          <section className="sb-panel min-w-0" aria-labelledby="multi-clients-heading">
-            <div className="sb-section-head">
-              <div>
-                <p className="sb-eyebrow">PREPARAÇÃO</p>
-                <h2 id="multi-clients-heading" className="mt-1 text-base font-medium">
-                  Clientes e rascunhos
-                </h2>
-              </div>
-              <span className="text-[10px] text-muted-foreground">
-                {selectedList.length} contas
-              </span>
-            </div>
-            <div className="sb-monitor-columns space-y-4 p-3 sm:p-5">
+        <MonitoringWorkspace
+          clientCount={selectedList.length}
+          eventCount={logs.length}
+          clients={
+            <>
               {selectedList.map((c) => {
                 const groups = clientData.getGroups(c.id).filter((g) => g.active);
                 return (
@@ -856,42 +889,17 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
                   </div>
                 );
               })}
-            </div>
-          </section>
-          <section className="sb-panel min-w-0 self-start" aria-labelledby="multi-events-heading">
-            <div className="sb-section-head">
-              <div>
-                <p className="sb-eyebrow">ACOMPANHAMENTO</p>
-                <h2
-                  id="multi-events-heading"
-                  className="mt-1 flex items-center gap-2 text-base font-medium"
-                >
-                  <Activity className="size-4" aria-hidden />
-                  Eventos
-                </h2>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={!logs.length}
-                className="h-8 px-2 text-xs"
-                onClick={() => multiMonitor.clearLogs()}
-              >
-                Limpar
-              </Button>
-            </div>
-            <div className="p-3 sm:p-5">
-              <MonitorLog entries={logs} showTime isMonitoring={running} />
-            </div>
-            <div className="flex flex-wrap justify-between gap-2 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
-              <span>
-                {logs.length} {logs.length === 1 ? "evento registrado" : "eventos registrados"}
-              </span>
-              <span>Horários de Brasília</span>
-            </div>
-          </section>
-        </div>
+            </>
+          }
+          events={
+            <MonitorLog
+              entries={logs}
+              showTime
+              isMonitoring={running}
+              onClear={() => multiMonitor.clearLogs()}
+            />
+          }
+        />
       </div>
       <MonitorSettingsPanel
         open={panelOpen}

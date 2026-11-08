@@ -1,4 +1,5 @@
 import { appAuth } from "@/lib/appAuth";
+import type { ClockFormat } from "@/lib/clockFormat";
 import * as cloud from "@/lib/cloudSync";
 
 const KEY_CREDS = "creds";
@@ -391,6 +392,43 @@ export const monitorSettings = {
   },
   patch(p: Partial<MonitorSettings>) {
     monitorSettings.set({ ...monitorSettings.get(), ...p });
+  },
+};
+
+// Display-only preference: local to this user/device, never pushed to Supabase.
+const CLOCK_FORMAT_KEY = "clock_format_v1";
+const CLOCK_FORMAT_EVENT = "clock-format:changed";
+function clockFormatKey() {
+  return `${userScope()}:${CLOCK_FORMAT_KEY}`;
+}
+
+export const clockPrefs = {
+  getFormat(): ClockFormat {
+    const saved = read<unknown>(clockFormatKey());
+    return saved === "12h" ? "12h" : "24h";
+  },
+  setFormat(format: ClockFormat): void {
+    if (!isBrowser() || (format !== "12h" && format !== "24h")) return;
+    try {
+      write(clockFormatKey(), format);
+      window.dispatchEvent(new Event(CLOCK_FORMAT_EVENT));
+    } catch {
+      // Storage may be disabled. Keep the existing/default format in that case.
+    }
+  },
+  subscribe(listener: () => void): () => void {
+    if (!isBrowser()) return () => {};
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === clockFormatKey()) listener();
+    };
+    window.addEventListener(CLOCK_FORMAT_EVENT, listener);
+    window.addEventListener("storage", onStorage);
+    const unsubscribeAuth = appAuth.subscribe(() => listener());
+    return () => {
+      window.removeEventListener(CLOCK_FORMAT_EVENT, listener);
+      window.removeEventListener("storage", onStorage);
+      unsubscribeAuth();
+    };
   },
 };
 

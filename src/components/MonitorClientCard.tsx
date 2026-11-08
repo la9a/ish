@@ -1,14 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  ChevronDown,
-  CircleHelp,
-  LoaderCircle,
-  Network,
-  Pencil,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { ChevronDown, CircleHelp, LoaderCircle, Network, Pencil, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ClientAvatar } from "@/components/ClientAvatar";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 import { miamiAccountInfo } from "@/lib/miamiAgent.functions";
 
 interface MonitorClientCardProps {
@@ -23,7 +17,8 @@ interface MonitorClientCardProps {
 }
 
 type Info = Awaited<ReturnType<typeof miamiAccountInfo>>;
-const dcLabel = (dc?: number | null) => (dc ? `DC ${dc}` : "Não informado");
+const DC_CITY: Record<number, string> = { 1: "Miami", 2: "Amsterdã", 3: "Miami", 4: "Amsterdã", 5: "Singapura" };
+const dcLabel = (dc?: number | null) => (dc ? `DC${dc} - ${DC_CITY[dc] ?? "?"}` : "Não informado");
 
 export function MonitorClientCard({
   title,
@@ -71,19 +66,18 @@ export function MonitorClientCard({
 
   const active = info?.ok && info.active;
   return (
-    <section className="sb-panel overflow-hidden">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
-        <span
-          className={`grid size-11 shrink-0 place-items-center rounded-full border border-border bg-background text-base font-medium ${censorTitle ? "censor-text" : ""}`}
-          aria-hidden
-        >
-          {title.charAt(0).toUpperCase()}
-        </span>
+    <section className="overflow-hidden rounded-xl border border-border bg-card">
+      <header className="flex flex-wrap items-start gap-2.5 border-b border-border p-3 sm:px-4 sm:py-3.5">
+        <ClientAvatar
+          name={title}
+          className={`size-10 shrink-0 ${censorTitle ? "censor-text" : ""}`}
+        />
         <div className="min-w-0 flex-1 basis-28">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Atendimento da cliente
-          </p>
-          <h3 className={`mt-1 truncate text-base font-medium ${censorTitle ? "censor-text" : ""}`}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cliente</p>
+          <h3
+            data-client-title="monitor"
+            className={`mt-1 whitespace-normal break-words [overflow-wrap:anywhere] text-base font-medium leading-6 ${censorTitle ? "censor-text" : ""}`}
+          >
             {title}
           </h3>
         </div>
@@ -93,7 +87,7 @@ export function MonitorClientCard({
           size="sm"
           disabled={disabled}
           onClick={onEditingChange}
-          className="h-10 gap-2 text-xs"
+          className="h-10 shrink-0 gap-1.5 px-3 text-xs"
           aria-pressed={editing}
         >
           <Pencil className="size-3.5" aria-hidden />
@@ -101,7 +95,7 @@ export function MonitorClientCard({
         </Button>
       </header>
       {clientId && (
-        <div className="border-b border-border bg-background/40 px-5 py-3">
+        <div className="border-b border-border bg-background/25 px-3 py-2.5 sm:px-4">
           <div className="flex items-center gap-2 text-[11px]" role="status">
             {loading ? (
               <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" aria-hidden />
@@ -112,18 +106,18 @@ export function MonitorClientCard({
             )}
             <span className={active ? "text-foreground/85" : "text-muted-foreground"}>
               {loading
-                ? "Consultando conta no agente…"
+                ? "Consultando conexão…"
                 : unavailable
                   ? "Não foi possível consultar a conexão"
                   : active
-                    ? "Conta disponível no agente nesta consulta"
+                    ? "Conexão disponível nesta consulta"
                     : info?.ok
                       ? "Conta não localizada no agente. Verifique em Conexões."
                       : "Conexão ainda não consultada"}
             </span>
           </div>
           {active && (
-            <details className="group mt-3">
+            <details className="group mt-2">
               <summary className="flex cursor-pointer list-none items-center gap-2 text-[10px] text-muted-foreground">
                 <Network className="size-3" aria-hidden />
                 Detalhes da conexão
@@ -151,7 +145,7 @@ export function MonitorClientCard({
                       className="flex min-w-0 items-start justify-between gap-3 sm:col-span-2"
                     >
                       <dt
-                        className={`min-w-0 truncate text-muted-foreground ${censorTitle ? "censor-text" : ""}`}
+                        className={`min-w-0 whitespace-normal break-words [overflow-wrap:anywhere] text-muted-foreground ${censorTitle ? "censor-text" : ""}`}
                       >
                         {group.name}
                       </dt>
@@ -159,7 +153,7 @@ export function MonitorClientCard({
                         {dcLabel(data?.dc)}
                         {typeof data?.members === "number" && (
                           <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <Users className="size-3" aria-hidden />
+                            <WorkspaceIcon variant="group" className="size-3" />
                             {data.members.toLocaleString("pt-BR")} membros
                           </span>
                         )}
@@ -175,7 +169,7 @@ export function MonitorClientCard({
           )}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-3 sm:p-4">{children}</div>
     </section>
   );
 }

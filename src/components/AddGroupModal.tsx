@@ -1,3 +1,4 @@
+import { BannerArtwork } from "@/components/BannerArtwork";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
   Dialog,
@@ -206,28 +207,23 @@ export function AddGroupModal({ open, onOpenChange, onSaved, clientId }: Props) 
         className="flex h-[min(760px,88dvh)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="relative shrink-0 overflow-hidden border-b border-border bg-card px-5 py-6 text-left sm:px-7">
-          <div className="relative z-10 max-w-[80%]">
-            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-background/50 px-2 py-1 text-[9px] uppercase tracking-[.14em] text-muted-foreground">
-              <span className="text-foreground">{picking ? "01" : "02"}</span>
+        <DialogHeader className="sb-illustrated-header">
+          <div className="sb-illustrated-copy">
+            <span className="inline-flex items-center gap-2 rounded-md border border-black/20 bg-white/20 px-2 py-1 text-[9px] uppercase tracking-[.14em] text-black/70">
+              <span className="text-black">{picking ? "01" : "02"}</span>
               {picking ? "Destino" : "Mensagem"}
               <span className="text-border">/</span>Adicionar grupo
             </span>
             <DialogTitle className="mt-4 text-2xl font-medium tracking-tight">
               {picking ? "Escolher grupo" : "Preparar rascunho"}
             </DialogTitle>
-            <DialogDescription className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            <DialogDescription className="mt-2 text-xs leading-relaxed text-black/70">
               {picking
                 ? "Selecione um grupo da conta Telegram desta cliente."
                 : "Revise o destino e a mensagem que será enviada."}
             </DialogDescription>
           </div>
-          <img
-            src="/art/cat-note.svg"
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-6 -bottom-12 h-44 w-44 rotate-[-12deg] object-cover opacity-80 sm:right-4"
-          />
+          <BannerArtwork image="/art/cat-add-group.svg" className="sb-header-art" />
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">

@@ -30,7 +30,7 @@ import { appAuth } from "@/lib/appAuth";
 import { AddGroupModal } from "@/components/AddGroupModal";
 import { EditGroupModal } from "@/components/EditGroupModal";
 import { MonitorLog } from "@/components/MonitorLog";
-import { Play, Square, ArrowLeft, Settings as SettingsIcon, Activity } from "lucide-react";
+import { Play, Square, ArrowLeft, Settings as SettingsIcon } from "lucide-react";
 import { HelpHint } from "@/components/HelpHint";
 import { MethodHelp } from "@/components/MethodHelp";
 
@@ -40,6 +40,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { MonitorSettingsPanel } from "@/components/MonitorSettingsPanel";
 import { GroupSummaryCard } from "@/components/GroupSummaryCard";
 import { MonitorClientCard } from "@/components/MonitorClientCard";
+import { MonitoringWorkspace } from "@/components/MonitoringWorkspace";
 import { ScheduleTimeCard } from "@/components/ScheduleTimeCard";
 
 import {
@@ -323,12 +324,13 @@ export function Dashboard() {
         <main className="sb-page">
           <div className="mx-auto max-w-7xl">
             <PageBanner
-              image="/art/cat-monitor.svg"
+              image="/art/cat-single.svg"
               compact
-              eyebrow="ATENDIMENTO INDIVIDUAL"
+              eyebrow="ATENDIMENTO ÚNICO"
               title="Monitoramento"
-              description="Gerencie os grupos, revise os rascunhos e acompanhe cada evento de envio."
+              description="Confira os grupos e rascunhos antes de iniciar."
               tone="peach"
+              hint="O monitoramento acompanha a abertura conforme o método escolhido. Envio e senha são confirmados nos eventos abaixo."
             >
               <button
                 type="button"
@@ -336,12 +338,15 @@ export function Dashboard() {
                 onClick={() => navigate({ to: "/dashboard/unico" })}
               >
                 <ArrowLeft className="size-4" aria-hidden />
-                Minhas clientes
+                Atendimento único
               </button>
             </PageBanner>
 
-            <section className="sb-monitor-strip" aria-label="Controles do monitoramento">
-              <div className="flex min-w-0 flex-wrap items-center gap-5">
+            <section
+              className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 min-[1100px]:flex min-[1100px]:items-center min-[1100px]:justify-between"
+              aria-label="Controles do monitoramento"
+            >
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 min-[1100px]:justify-start min-[1100px]:gap-5">
                 <div className="flex items-center gap-2.5">
                   <span className={`sb-live-chip ${running ? "is-live" : ""}`} role="status">
                     <span aria-hidden />
@@ -364,7 +369,7 @@ export function Dashboard() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2 [&>div:first-child]:mr-auto min-[1100px]:[&>div:first-child]:mr-0">
                 <BrasiliaClock />
                 <Button
                   type="button"
@@ -380,7 +385,7 @@ export function Dashboard() {
                 {running ? (
                   <Button
                     onClick={() => monitor.stop("manual")}
-                    className="rounded-xl h-10 w-28 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 shadow-none"
+                    className="rounded-xl h-10 w-24 sm:w-28 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 shadow-none"
                   >
                     <Square className="size-3.5 fill-white" strokeWidth={0} /> Parar
                   </Button>
@@ -415,7 +420,7 @@ export function Dashboard() {
                     disabled={
                       !miamiReady || miamiConnecting || groups.filter((g) => g.active).length === 0
                     }
-                    className="rounded-xl h-10 w-28 bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 disabled:opacity-40"
+                    className="rounded-xl h-10 w-24 sm:w-28 bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 disabled:opacity-40"
                   >
                     <Play className="size-3.5 fill-neutral-900" strokeWidth={0} /> Iniciar
                   </Button>
@@ -423,49 +428,80 @@ export function Dashboard() {
               </div>
             </section>
 
-            <div className="sb-workspace-grid">
-              <section className="sb-panel min-w-0" aria-labelledby="single-client-heading">
-                <div className="sb-section-head">
-                  <div>
-                    <p className="sb-eyebrow">PREPARAÇÃO</p>
-                    <h2 id="single-client-heading" className="mt-1 text-base font-medium">
-                      Cliente e rascunhos
-                    </h2>
+            <MonitoringWorkspace
+              clientCount={1}
+              eventCount={logs.length}
+              clientHeading="Cliente e rascunhos"
+              clients={
+                <MonitorClientCard
+                  title={client?.title ?? "Cliente"}
+                  censorTitle={settings.censorClientTitle}
+                  editing={editingGroups}
+                  disabled={running}
+                  onEditingChange={() => setEditingGroups((v) => !v)}
+                  clientId={client?.id}
+                  groups={groups.filter((g) => g.active).map((g) => ({ id: g.id, name: g.name }))}
+                >
+                  {/* Grupos */}
+                  <div className="mb-1 text-xs font-sans text-readable-muted">
+                    {groups.length > 1 ? "Grupos" : "Grupo"}
                   </div>
-                  <span className="rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground">
-                    01 cliente
-                  </span>
-                </div>
-                <div className="p-3 sm:p-5">
-                  <MonitorClientCard
-                    title={client?.title ?? "Cliente"}
-                    censorTitle={settings.censorClientTitle}
-                    editing={editingGroups}
-                    disabled={running}
-                    onEditingChange={() => setEditingGroups((v) => !v)}
-                    clientId={client?.id}
-                    groups={groups.filter((g) => g.active).map((g) => ({ id: g.id, name: g.name }))}
-                  >
-                    {/* Grupos */}
-                    <div className="mb-1 text-xs font-sans text-readable-muted">
-                      {groups.length > 1 ? "Grupos" : "Grupo"}
-                    </div>
-                    <div className="space-y-2">
-                      {groups.length === 0 ? (
-                        <button
-                          type="button"
-                          disabled={running}
+                  <div className="space-y-2">
+                    {groups.length === 0 ? (
+                      <button
+                        type="button"
+                        disabled={running}
+                        onClick={() => setModalOpen(true)}
+                        className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        <div className="text-xs text-muted-foreground">
+                          Nenhum grupo ainda.{" "}
+                          <span className="text-foreground">Clique para adicionar.</span>
+                        </div>
+                      </button>
+                    ) : editingGroups ? (
+                      <>
+                        {groups.map((g) => (
+                          <GroupSummaryCard
+                            key={g.id}
+                            group={g}
+                            showIcon={settings.showGroupIcons}
+                            censorPhoto={settings.censorGroupPhoto}
+                            censorName={settings.censorGroupName}
+                            censorDraft={settings.censorDraft}
+                            editing
+                            disabled={running}
+                            onToggle={() => toggleActive(g)}
+                            onEdit={() => setEditing(g)}
+                            onRemove={() => remove(g)}
+                          />
+                        ))}
+                        <Button
+                          variant="outline"
                           onClick={() => setModalOpen(true)}
-                          className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                          disabled={running}
+                          className="site-control-glass rounded-xl h-9 w-full"
                         >
-                          <div className="text-xs text-muted-foreground">
-                            Nenhum grupo ainda.{" "}
-                            <span className="text-foreground">Clique para adicionar.</span>
-                          </div>
-                        </button>
-                      ) : editingGroups ? (
-                        <>
-                          {groups.map((g) => (
+                          + Adicionar grupo
+                        </Button>
+                      </>
+                    ) : groups.filter((g) => g.active).length === 0 ? (
+                      <button
+                        type="button"
+                        disabled={running}
+                        onClick={() => setEditingGroups(true)}
+                        className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        <div className="text-xs text-muted-foreground">
+                          Nenhum grupo ativo.{" "}
+                          <span className="text-foreground">Clique em editar para ativar.</span>
+                        </div>
+                      </button>
+                    ) : (
+                      groups
+                        .filter((g) => g.active)
+                        .map((g) => {
+                          return (
                             <GroupSummaryCard
                               key={g.id}
                               group={g}
@@ -473,136 +509,67 @@ export function Dashboard() {
                               censorPhoto={settings.censorGroupPhoto}
                               censorName={settings.censorGroupName}
                               censorDraft={settings.censorDraft}
-                              editing
-                              disabled={running}
-                              onToggle={() => toggleActive(g)}
-                              onEdit={() => setEditing(g)}
-                              onRemove={() => remove(g)}
                             />
-                          ))}
-                          <Button
-                            variant="outline"
-                            onClick={() => setModalOpen(true)}
-                            disabled={running}
-                            className="site-control-glass rounded-xl h-9 w-full"
-                          >
-                            + Adicionar grupo
-                          </Button>
-                        </>
-                      ) : groups.filter((g) => g.active).length === 0 ? (
-                        <button
-                          type="button"
-                          disabled={running}
-                          onClick={() => setEditingGroups(true)}
-                          className="w-full text-left hairline rounded-xl p-3 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          <div className="text-xs text-muted-foreground">
-                            Nenhum grupo ativo.{" "}
-                            <span className="text-foreground">Clique em editar para ativar.</span>
-                          </div>
-                        </button>
-                      ) : (
-                        groups
-                          .filter((g) => g.active)
-                          .map((g) => {
-                            return (
-                              <GroupSummaryCard
-                                key={g.id}
-                                group={g}
-                                showIcon={settings.showGroupIcons}
-                                censorPhoto={settings.censorGroupPhoto}
-                                censorName={settings.censorGroupName}
-                                censorDraft={settings.censorDraft}
-                              />
-                            );
-                          })
-                      )}
-                    </div>
-
-                    {/* Método */}
-                    <div className="mt-4 pt-4 hairline-t">
-                      <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
-                        Método
-                        <HelpHint side="top" iconClassName="size-3">
-                          <MethodHelp />
-                        </HelpHint>
-                      </div>
-                      <Select
-                        value={client?.method ?? "abertura"}
-                        onValueChange={(v) => {
-                          if (!client) return;
-                          if (methodReloadRef.current) window.clearTimeout(methodReloadRef.current);
-                          setVerifying(true);
-                          clientsStore.update(client.id, {
-                            method: v as "abertura" | "mensagem" | "abertura2",
-                          });
-                          setClient(clientsStore.get(client.id) ?? null);
-                          methodReloadRef.current = window.setTimeout(
-                            () => setVerifying(false),
-                            900,
                           );
-                        }}
-                        disabled={running}
-                      >
-                        <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
-                          {client?.method === "mensagem"
-                            ? "Grupo aberto"
-                            : client?.method === "abertura2"
-                              ? "Grupo aberto 2"
-                              : "Grupo fechado"}
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="abertura">Grupo fechado</SelectItem>
-                          <SelectItem value="mensagem">Grupo aberto</SelectItem>
-                          <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {client?.method === "abertura2" && (
-                        <ScheduleTimeCard
-                          clientId={client.id}
-                          value={client.scheduleEnv}
-                          running={running}
-                          onSaved={() => setClient(clientsStore.get(client.id) ?? null)}
-                        />
-                      )}
-                    </div>
-                  </MonitorClientCard>
-                </div>
-              </section>
-              <section className="sb-panel min-w-0" aria-labelledby="single-events-heading">
-                <div className="sb-section-head">
-                  <div>
-                    <p className="sb-eyebrow">ACOMPANHAMENTO</p>
-                    <h2
-                      id="single-events-heading"
-                      className="mt-1 flex items-center gap-2 text-base font-medium"
-                    >
-                      <Activity className="size-4" aria-hidden />
-                      Eventos
-                    </h2>
+                        })
+                    )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={!logs.length}
-                    className="h-8 px-2 text-xs"
-                    onClick={() => monitor.clearLogs()}
-                  >
-                    Limpar
-                  </Button>
-                </div>
-                <div className="p-3 sm:p-5">
-                  <MonitorLog entries={logs} showTime isMonitoring={running} />
-                </div>
-                <div className="flex flex-wrap justify-between gap-2 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
-                  <span>
-                    {logs.length} {logs.length === 1 ? "evento registrado" : "eventos registrados"}
-                  </span>
-                  <span>Horários de Brasília</span>
-                </div>
-              </section>
-            </div>
+
+                  {/* Método */}
+                  <div className="mt-4 pt-4 hairline-t">
+                    <div className="text-xs font-sans text-readable-muted mb-1.5 inline-flex items-center gap-1.5">
+                      Método
+                      <HelpHint side="top" iconClassName="size-3">
+                        <MethodHelp />
+                      </HelpHint>
+                    </div>
+                    <Select
+                      value={client?.method ?? "abertura"}
+                      onValueChange={(v) => {
+                        if (!client) return;
+                        if (methodReloadRef.current) window.clearTimeout(methodReloadRef.current);
+                        setVerifying(true);
+                        clientsStore.update(client.id, {
+                          method: v as "abertura" | "mensagem" | "abertura2",
+                        });
+                        setClient(clientsStore.get(client.id) ?? null);
+                        methodReloadRef.current = window.setTimeout(() => setVerifying(false), 900);
+                      }}
+                      disabled={running}
+                    >
+                      <SelectTrigger className="site-control-glass h-9 rounded-lg border-border shadow-none">
+                        {client?.method === "mensagem"
+                          ? "Grupo aberto"
+                          : client?.method === "abertura2"
+                            ? "Grupo aberto 2"
+                            : "Grupo fechado"}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="abertura">Grupo fechado</SelectItem>
+                        <SelectItem value="mensagem">Grupo aberto</SelectItem>
+                        <SelectItem value="abertura2">Grupo aberto 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {client?.method === "abertura2" && (
+                      <ScheduleTimeCard
+                        clientId={client.id}
+                        value={client.scheduleEnv}
+                        running={running}
+                        onSaved={() => setClient(clientsStore.get(client.id) ?? null)}
+                      />
+                    )}
+                  </div>
+                </MonitorClientCard>
+              }
+              events={
+                <MonitorLog
+                  entries={logs}
+                  showTime
+                  isMonitoring={running}
+                  onClear={() => monitor.clearLogs()}
+                />
+              }
+            />
           </div>
 
           <AddGroupModal

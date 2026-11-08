@@ -1,6 +1,8 @@
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+import { BannerArtwork } from "@/components/BannerArtwork";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { appAuth } from "@/lib/appAuth";
 import { getAccessLock } from "@/lib/accessKey.functions";
 import { Logo } from "@/components/Logo";
@@ -12,6 +14,10 @@ export const Route = createFileRoute("/login")({
       { title: "Entre na sua conta · Senha Baixa" },
       { name: "robots", content: "noindex,nofollow,noarchive" },
       { name: "description", content: "Suas clientes, seus rascunhos. Tudo em um só lugar." },
+      { property: "og:title", content: "Entre na sua conta · Senha Baixa" },
+      { property: "og:description", content: "Suas clientes, seus rascunhos. Tudo em um só lugar." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LoginPage,
@@ -91,9 +97,7 @@ function LoginPage() {
       <section className="sb-auth-form">
         <a href="/" className="sb-brand" aria-label="Senha Baixa, início">
           <Logo className="size-9" />
-          <span>
-            senha baixa<span className="text-muted-foreground">.</span>
-          </span>
+          <span>Senha Baixa</span>
         </a>
         <div className="sb-auth-inner">
           <span className="sb-eyebrow">SENHA BAIXA · ACESSO</span>
@@ -111,9 +115,9 @@ function LoginPage() {
                 Sua chave de acesso
               </label>
               <div className="relative">
-                <KeyRound
+                <WorkspaceIcon
+                  variant="authorization"
                   className="pointer-events-none absolute left-4 top-4 size-4 text-muted-foreground"
-                  aria-hidden
                 />
                 <input
                   id="access-key"
@@ -159,21 +163,14 @@ function LoginPage() {
               )}
             </button>
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="size-4" /> Acesso individual às suas clientes.
+              <WorkspaceIcon variant="identity" className="size-4" /> Acesso individual às suas
+              clientes.
             </p>
           </form>
         </div>
-        <footer className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-          <span>© {new Date().getFullYear()} Senha Baixa</span>
-          <span>Painel de atendimento.</span>
-        </footer>
       </section>
       <section className="sb-auth-art" aria-label="Ilustração de gato colorido">
-        <img
-          src="/art/cat-hero.svg"
-          alt="Gato de óculos em uma composição lilás, rosa e verde"
-          className="absolute inset-0 size-full object-cover"
-        />
+        <BannerArtwork image="/art/cat-login.svg" className="sb-auth-scene" priority />
         <div className="sb-art-label">
           <span className="sb-art-pill">SENHA BAIXA</span>
           <p>

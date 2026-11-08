@@ -19,6 +19,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardCadastroRouteImport } from './routes/dashboard.cadastro'
+import { Route as DashboardClientesRouteImport } from './routes/dashboard.clientes'
 import { Route as DashboardMultiRouteImport } from './routes/dashboard.multi'
 import { Route as DashboardUnicoRouteImport } from './routes/dashboard.unico'
 import { Route as DashboardMultiIndexRouteImport } from './routes/dashboard.multi.index'
@@ -76,6 +77,11 @@ const DashboardCadastroRoute = DashboardCadastroRouteImport.update({
   path: '/cadastro',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardClientesRoute = DashboardClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardMultiRoute = DashboardMultiRouteImport.update({
   id: '/multi',
   path: '/multi',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/dashboard/cadastro': typeof DashboardCadastroRoute
+  '/dashboard/clientes': typeof DashboardClientesRoute
   '/dashboard/multi': typeof DashboardMultiRouteWithChildren
   '/dashboard/unico': typeof DashboardUnicoRouteWithChildren
   '/admin/': typeof AdminIndexRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/dashboard/cadastro': typeof DashboardCadastroRoute
+  '/dashboard/clientes': typeof DashboardClientesRoute
   '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/multi/$selectionId': typeof DashboardMultiSelectionIdRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/dashboard/cadastro': typeof DashboardCadastroRoute
+  '/dashboard/clientes': typeof DashboardClientesRoute
   '/dashboard/multi': typeof DashboardMultiRouteWithChildren
   '/dashboard/unico': typeof DashboardUnicoRouteWithChildren
   '/admin/': typeof AdminIndexRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/settings'
     | '/dashboard/cadastro'
+    | '/dashboard/clientes'
     | '/dashboard/multi'
     | '/dashboard/unico'
     | '/admin/'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/settings'
     | '/dashboard/cadastro'
+    | '/dashboard/clientes'
     | '/admin'
     | '/dashboard'
     | '/dashboard/multi/$selectionId'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/settings'
     | '/dashboard/cadastro'
+    | '/dashboard/clientes'
     | '/dashboard/multi'
     | '/dashboard/unico'
     | '/admin/'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/dashboard/cadastro'
       preLoaderRoute: typeof DashboardCadastroRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/clientes': {
+      id: '/dashboard/clientes'
+      path: '/clientes'
+      fullPath: '/dashboard/clientes'
+      preLoaderRoute: typeof DashboardClientesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/multi': {
@@ -382,6 +401,7 @@ const DashboardUnicoRouteWithChildren = DashboardUnicoRoute._addFileChildren(
 
 interface DashboardRouteChildren {
   DashboardCadastroRoute: typeof DashboardCadastroRoute
+  DashboardClientesRoute: typeof DashboardClientesRoute
   DashboardMultiRoute: typeof DashboardMultiRouteWithChildren
   DashboardUnicoRoute: typeof DashboardUnicoRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -389,6 +409,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCadastroRoute: DashboardCadastroRoute,
+  DashboardClientesRoute: DashboardClientesRoute,
   DashboardMultiRoute: DashboardMultiRouteWithChildren,
   DashboardUnicoRoute: DashboardUnicoRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,

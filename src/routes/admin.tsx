@@ -10,9 +10,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { appAuth } from "@/lib/appAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { pullAll, subscribeRealtime, migrateLegacyLocalDataOnce } from "@/lib/cloudSync";
-import { LogOut, Menu, LayoutDashboard, Plug, Users, Layers, ArrowUpRight } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 import { clientsStore } from "@/lib/storage";
 import { Logo } from "@/components/Logo";
+import { PageEntrance } from "@/components/PageEntrance";
 import {
   Sheet,
   SheetTrigger,
@@ -40,6 +42,10 @@ export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { title: "Senha Baixa | Painel" },
+      { property: "og:title", content: "Senha Baixa | Painel" },
+      { property: "og:description", content: "Suas clientes e seus atendimentos em um só lugar." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "description", content: "Suas clientes e seus atendimentos em um só lugar." },
     ],
   }),
@@ -139,25 +145,31 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
     {
       to: "/dashboard" as const,
       label: "Visão geral",
-      Icon: LayoutDashboard,
+      icon: "overview" as const,
       active: path === "/dashboard" || path === "/dashboard/",
     },
     {
-      to: "/dashboard/unico" as const,
+      to: "/dashboard/clientes" as const,
       label: "Minhas clientes",
-      Icon: Users,
-      active: path.startsWith("/dashboard/unico") || path.startsWith("/dashboard/cadastro"),
+      icon: "clients" as const,
+      active: path.startsWith("/dashboard/clientes") || path.startsWith("/dashboard/cadastro"),
+    },
+    {
+      to: "/dashboard/unico" as const,
+      label: "Atendimento único",
+      icon: "single" as const,
+      active: path.startsWith("/dashboard/unico"),
     },
     {
       to: "/dashboard/multi" as const,
-      label: "Atendimento múltiplo",
-      Icon: Layers,
+      label: "Atendimento multi",
+      icon: "multi" as const,
       active: path.startsWith("/dashboard/multi"),
     },
     {
       to: "/admin/connection" as const,
       label: "Conexões",
-      Icon: Plug,
+      icon: "connections" as const,
       active: path.startsWith("/admin/connection"),
     },
   ];
@@ -180,15 +192,13 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
           aria-label="Senha Baixa, visão geral"
         >
           <Logo className="size-9 shrink-0" />
-          <span>
-            senha baixa<span className="text-muted-foreground">.</span>
-          </span>
+          <span>Senha Baixa</span>
         </Link>
-        <p className="mb-3 px-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Seu espaço de trabalho
+        <p className="mb-3 px-6 text-xs font-medium tracking-wide text-muted-foreground">
+          Workspace
         </p>
         <nav aria-label="Navegação principal" className="space-y-1 px-3">
-          {nav.map(({ to, label, Icon, active }) => (
+          {nav.map(({ to, label, icon, active }) => (
             <Link
               key={to}
               to={to}
@@ -196,7 +206,7 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
               aria-current={active ? "page" : undefined}
               className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px] font-medium transition-colors ${active ? "bg-white text-black" : "text-muted-foreground hover:bg-white/5 hover:text-white"}`}
             >
-              <Icon className="size-[17px] shrink-0" strokeWidth={1.7} aria-hidden />
+              <WorkspaceIcon variant={icon} className="size-[18px] shrink-0" />
               <span className="flex-1">{label}</span>
               {to === "/admin/connection" && alertCount > 0 && (
                 <span
@@ -209,30 +219,10 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
             </Link>
           ))}
         </nav>
-        <div className="mx-5 mt-auto mb-6 rounded-xl border border-border p-4">
-          <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            CADASTRO
+        <div className="mt-auto flex items-center gap-3 border-t border-border px-5 py-5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground">
+            <WorkspaceIcon variant="person" className="size-[18px]" />
           </span>
-          <p className="mt-2 text-[13px] leading-relaxed text-foreground/85">
-            Nova cliente
-            <br />
-            Conecte uma conta Telegram.
-          </p>
-          <Link
-            to="/dashboard/cadastro"
-            onClick={() => setOpen(false)}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium"
-          >
-            Adicionar cliente <ArrowUpRight className="size-3.5" aria-hidden />
-          </Link>
-        </div>
-        <div className="flex items-center gap-3 border-t border-border px-5 py-5">
-          <div
-            className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-xs font-medium"
-            aria-hidden
-          >
-            {user?.charAt(0).toUpperCase()}
-          </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{user}</p>
             <p className="mt-0.5 text-[10px] text-muted-foreground">Sua conta</p>
@@ -301,7 +291,7 @@ export function AdminLayout({ content }: { content?: ReactNode } = {}) {
           </span>
         </header>
         <div id="main-content" tabIndex={-1}>
-          {content ?? <Outlet />}
+          <PageEntrance>{content ?? <Outlet />}</PageEntrance>
         </div>
       </div>
       <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>

@@ -68,7 +68,8 @@ function rowToClient(r: any): ClientRecord {
     biweeklyAnchor: r.biweekly_anchor != null ? Number(r.biweekly_anchor) : null,
     monthlyDays: Array.isArray(r.monthly_days) ? r.monthly_days : null,
     scheduleOverrides,
-    method: r.method === "mensagem" ? "mensagem" : "abertura",
+    method:
+      r.method === "abertura2" ? "abertura2" : r.method === "mensagem" ? "mensagem" : "abertura",
   };
 }
 

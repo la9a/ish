@@ -261,3 +261,20 @@ test("stale writes and subscriptions for A are rejected under B's session", asyn
   assert.deepEqual(f.writes, []);
   assert.deepEqual(f.callbacks, []);
 });
+
+test("restoring a scheduled client keeps Grupo aberto 2 and its canonical 24h target", async () => {
+  const f = fixture({
+    results: {
+      clients: {
+        data: [
+          { id: "scheduled", title: "Agendada", method: "abertura2", schedule_env: "17:59:36" },
+        ],
+        error: null,
+      },
+    },
+  });
+  await f.api.pullAll("A");
+  const saved = f.writes.find((entry) => entry.kind === "clients").value[0];
+  assert.equal(saved.method, "abertura2");
+  assert.equal(saved.scheduleEnv, "17:59:36");
+});

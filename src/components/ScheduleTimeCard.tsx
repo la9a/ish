@@ -3,28 +3,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clock, Check, Pencil, Lock } from "lucide-react";
 import { clientsStore } from "@/lib/storage";
-import { brasiliaTargetToday, serverNow, syncServerClock } from "@/lib/brasiliaSync";
+import { brasiliaTargetToday, isClockSynced, serverNow, syncServerClock } from "@/lib/brasiliaSync";
+import {
+  formatClockTime,
+  normalizeTime24,
+  time12To24,
+  time24To12,
+  type ClockFormat,
+  type DayPeriod,
+} from "@/lib/clockFormat";
+import { useClockFormat } from "@/lib/useClockFormat";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const FULL = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
+type EditorValue = { time: string; period: DayPeriod; format: ClockFormat };
+function editorValue(canonical: string, format: ClockFormat): EditorValue {
+  const converted = time24To12(canonical);
+  return {
+    time: format === "12h" ? (converted?.time.padStart(8, "0") ?? "") : canonical,
+    period: converted?.period ?? "AM",
+    format,
+  };
+}
+function canonicalValue(editor: EditorValue): string | null {
+  return editor.format === "12h"
+    ? time12To24(editor.time, editor.period)
+    : normalizeTime24(editor.time);
+}
 
-/** Máscara 24h HH:MM:SS a partir de dígitos digitados. */
-function mask(raw: string): string {
-  const d = raw.replace(/\D/g, "").slice(0, 6);
+/** Editors use two hour digits; display clocks omit the leading zero in 12h. */
+function mask(raw: string, format: ClockFormat): string {
+  let digits = raw.replace(/\D/g, "").slice(0, 6);
+  // A single 12h digit such as 5 becomes 05 so a mobile numeric keyboard
+  // can enter 5:59:36 without needing a colon key.
+  if (format === "12h" && digits && (Number(digits[0]) > 1 || raw.indexOf(":") === 1)) {
+    digits = `0${digits}`.slice(0, 6);
+  }
   const out: string[] = [];
-  for (let i = 0; i < d.length; i++) {
-    let ch = d[i];
-    // Clamps por posição (24h)
-    if (i === 0 && Number(ch) > 2) ch = "2";
-    if (i === 1 && d[0] === "2" && Number(ch) > 3) ch = "3";
-    if ((i === 2 || i === 4) && Number(ch) > 5) ch = "5";
+  for (let i = 0; i < digits.length; i++) {
+    let ch = digits[i];
+    if (format === "24h") {
+      if (i === 0 && Number(ch) > 2) ch = "2";
+      if (i === 1 && digits[0] === "2" && Number(ch) > 3) ch = "3";
+      if ((i === 2 || i === 4) && Number(ch) > 5) ch = "5";
+    }
     out.push(ch);
-    if ((i === 1 || i === 3) && i !== d.length - 1) out.push(":");
+    if ((i === 1 || i === 3) && i !== digits.length - 1) out.push(":");
   }
   return out.join("");
 }
 
 function remainingLabel(target: number): string {
-  let ms = target - serverNow();
+  if (!isClockSynced()) return "sincronizando horário de Brasília…";
+  const ms = target - serverNow();
   if (ms <= 0) return "horário atingido";
   const total = Math.floor(ms / 1000);
   const h = Math.floor(total / 3600);
@@ -45,17 +81,27 @@ interface Props {
 
 export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
   const scheduleId = useId();
-  const normalized =
-    value && FULL.test(value) ? value : value && /^\d{2}:\d{2}$/.test(value) ? `${value}:00` : "";
-  const [draft, setDraft] = useState(normalized || "");
+  const [format] = useClockFormat();
+  const normalized = normalizeTime24(value) ?? "";
+  const [editor, setEditor] = useState(() => editorValue(normalized, format));
   const [editing, setEditing] = useState(!normalized);
   const [tick, setTick] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setDraft(normalized || "");
+    setEditor(editorValue(normalized, format));
     setEditing(!normalized);
+    // Changing clients starts a fresh editor; format changes preserve valid drafts below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  useEffect(() => {
+    setEditor((previous) =>
+      previous.format === format
+        ? previous
+        : editorValue(canonicalValue(previous) ?? normalized, format),
+    );
+  }, [format, normalized]);
 
   useEffect(() => {
     syncServerClock().catch(() => {});
@@ -67,17 +113,13 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
     return () => window.clearInterval(id);
   }, [editing, normalized]);
 
-  // Aceita HH:MM (completa com :00) ou HH:MM:SS.
-  const finalValue = FULL.test(draft)
-    ? draft
-    : /^\d{2}:\d{2}$/.test(draft) && FULL.test(`${draft}:00`)
-      ? `${draft}:00`
-      : "";
+  // Conversion is display-only. Stored schedules remain HH:MM:SS in 24h.
+  const finalValue = canonicalValue(editor);
   const valid = !!finalValue;
 
   function confirm() {
-    if (!valid) return;
-    setDraft(finalValue);
+    if (!finalValue || running) return;
+    setEditor(editorValue(finalValue, format));
     clientsStore.update(clientId, { scheduleEnv: finalValue });
     setEditing(false);
     onSaved?.();
@@ -97,7 +139,7 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
             Horário de envio
           </h3>
           <p className="mt-0.5 text-[9px] uppercase tracking-[.1em] text-muted-foreground">
-            Brasília · formato 24h
+            Brasília · formato {format}
           </p>
         </div>
         {running && (
@@ -117,11 +159,16 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
               <Input
                 id={scheduleId}
                 ref={inputRef}
-                value={draft}
+                value={editor.time}
                 inputMode="numeric"
                 autoComplete="off"
-                placeholder="00:00:00"
-                onChange={(event) => setDraft(mask(event.target.value))}
+                placeholder={format === "12h" ? "05:59:36" : "17:59:36"}
+                onChange={(event) =>
+                  setEditor((previous) => ({
+                    ...previous,
+                    time: mask(event.target.value, previous.format),
+                  }))
+                }
                 onKeyDown={(event) => {
                   if (event.key === "Enter") confirm();
                 }}
@@ -129,6 +176,34 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
                 aria-describedby={`${scheduleId}-help`}
               />
             </div>
+            {format === "12h" && (
+              <div className="w-24 shrink-0">
+                <label
+                  htmlFor={`${scheduleId}-period`}
+                  className="mb-2 block text-[10px] text-muted-foreground"
+                >
+                  Período
+                </label>
+                <Select
+                  value={editor.period}
+                  onValueChange={(period) =>
+                    setEditor((previous) => ({ ...previous, period: period as DayPeriod }))
+                  }
+                >
+                  <SelectTrigger
+                    id={`${scheduleId}-period`}
+                    className="h-12"
+                    aria-label="Período do horário de envio"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AM">AM</SelectItem>
+                    <SelectItem value="PM">PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button
               type="button"
               size="sm"
@@ -141,9 +216,9 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
             </Button>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-[1.75rem] font-medium leading-none tabular-nums tracking-[.06em]">
-              {normalized || "--:--:--"}
+              {formatClockTime(normalized, format)}
             </span>
             <Button
               type="button"
@@ -151,7 +226,10 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
               variant="outline"
               className="h-9 rounded-lg px-3 text-[11px]"
               disabled={running}
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setEditor(editorValue(normalized, format));
+                setEditing(true);
+              }}
             >
               <Pencil className="size-3.5" aria-hidden />
               Editar
@@ -164,9 +242,11 @@ export function ScheduleTimeCard({ clientId, value, running, onSaved }: Props) {
           data-tick={tick}
         >
           {!normalized
-            ? "Defina o horário em formato 24h (ex.: 20:00:00)."
+            ? format === "12h"
+              ? "Informe hora, minuto e segundo (ex.: 05:59:36) e escolha AM ou PM."
+              : "Defina o horário em formato 24h (ex.: 20:00:00)."
             : running
-              ? `Aguardando ${normalized} · ${remainingLabel(brasiliaTargetToday(normalized))}`
+              ? `Aguardando ${formatClockTime(normalized, format)} · ${remainingLabel(brasiliaTargetToday(normalized))}`
               : remainingLabel(brasiliaTargetToday(normalized))}
         </p>
       </div>

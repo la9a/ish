@@ -1,0 +1,110 @@
+{
+  "hero": {
+    "sheet": 1,
+    "column": 0,
+    "row": 0,
+    "meaning": "Visão geral"
+  },
+  "note": {
+    "sheet": 1,
+    "column": 1,
+    "row": 0,
+    "meaning": "Minhas clientes"
+  },
+  "single-select": {
+    "sheet": 1,
+    "column": 2,
+    "row": 0,
+    "meaning": "Atendimento único"
+  },
+  "single": {
+    "sheet": 1,
+    "column": 0,
+    "row": 1,
+    "meaning": "Monitoramento único"
+  },
+  "multi-select": {
+    "sheet": 1,
+    "column": 1,
+    "row": 1,
+    "meaning": "Seleção multi"
+  },
+  "multi": {
+    "sheet": 1,
+    "column": 2,
+    "row": 1,
+    "meaning": "Monitoramento multi"
+  },
+  "connect": {
+    "sheet": 2,
+    "column": 0,
+    "row": 0,
+    "meaning": "Conexões"
+  },
+  "register": {
+    "sheet": 2,
+    "column": 1,
+    "row": 0,
+    "meaning": "Nova cliente"
+  },
+  "edit-client": {
+    "sheet": 2,
+    "column": 2,
+    "row": 0,
+    "meaning": "Editar cliente"
+  },
+  "reconnect": {
+    "sheet": 2,
+    "column": 0,
+    "row": 1,
+    "meaning": "Reconectar cliente"
+  },
+  "code": {
+    "sheet": 2,
+    "column": 1,
+    "row": 1,
+    "meaning": "Confirmar telefone"
+  },
+  "code-sending": {
+    "sheet": 2,
+    "column": 2,
+    "row": 1,
+    "meaning": "Enviar código"
+  },
+  "code-failure": {
+    "sheet": 3,
+    "column": 0,
+    "row": 0,
+    "meaning": "Falha: avião amassado sem gato"
+  },
+  "add-group": {
+    "sheet": 3,
+    "column": 1,
+    "row": 0,
+    "meaning": "Adicionar grupo"
+  },
+  "edit-draft": {
+    "sheet": 3,
+    "column": 2,
+    "row": 0,
+    "meaning": "Editar rascunho"
+  },
+  "registration-help": {
+    "sheet": 3,
+    "column": 0,
+    "row": 1,
+    "meaning": "Ajuda do cadastro"
+  },
+  "login": {
+    "sheet": 3,
+    "column": 1,
+    "row": 1,
+    "meaning": "Acesso"
+  },
+  "monitor": {
+    "sheet": 3,
+    "column": 2,
+    "row": 1,
+    "meaning": "Eventos de monitoramento"
+  }
+}

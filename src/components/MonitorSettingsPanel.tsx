@@ -1,7 +1,9 @@
 import { useId } from "react";
-import { Bell, CircleStop, Play, SlidersHorizontal, Volume2 } from "lucide-react";
+import { Bell, CircleStop, Clock, Play, SlidersHorizontal, Volume2 } from "lucide-react";
 import { playSound, START_SOUND_OPTIONS, STOP_SOUND_OPTIONS } from "@/lib/beep";
 import type { MonitorSettings } from "@/lib/storage";
+import { useClockFormat } from "@/lib/useClockFormat";
+import type { ClockFormat } from "@/lib/clockFormat";
 import {
   Select,
   SelectContent,
@@ -59,6 +61,8 @@ function SettingsRow({
 }
 
 export function MonitorSettingsPanel({ open, onOpenChange, settings, onChange }: Props) {
+  const [clockFormat, setClockFormat] = useClockFormat();
+  const clockFormatId = useId();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-[440px]">
@@ -70,7 +74,7 @@ export function MonitorSettingsPanel({ open, onOpenChange, settings, onChange }:
             Opções do atendimento
           </SheetTitle>
           <SheetDescription className="text-xs leading-6">
-            Ajuste a parada automática e os avisos sonoros deste painel.
+            Ajuste a parada automática, os avisos sonoros e a exibição dos horários.
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-6 px-6 py-6">
@@ -184,6 +188,40 @@ export function MonitorSettingsPanel({ open, onOpenChange, settings, onChange }:
                   </div>
                 </div>
               )}
+            </div>
+          </section>
+          <section className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+              <Clock className="size-4 text-muted-foreground" aria-hidden />
+              <h3 className="text-xs font-medium">Formato de horário</h3>
+            </div>
+            <div className="space-y-3 p-5">
+              <label htmlFor={clockFormatId} className="block text-xs font-medium">
+                Exibição do relógio
+              </label>
+              <Select
+                value={clockFormat}
+                onValueChange={(value) => setClockFormat(value as ClockFormat)}
+              >
+                <SelectTrigger
+                  id={clockFormatId}
+                  className="h-10 text-xs"
+                  aria-describedby={`${clockFormatId}-help`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">24 horas · 17:59:36</SelectItem>
+                  <SelectItem value="12h">12 horas · 5:59:36 PM</SelectItem>
+                </SelectContent>
+              </Select>
+              <p
+                id={`${clockFormatId}-help`}
+                className="text-[11px] leading-6 text-muted-foreground"
+              >
+                O relógio e o horário de envio continuam no fuso de Brasília, sincronizados com o
+                servidor. AM indica antes do meio-dia; PM, a partir do meio-dia.
+              </p>
             </div>
           </section>
           <p className="flex items-start gap-2 text-[11px] leading-6 text-muted-foreground">

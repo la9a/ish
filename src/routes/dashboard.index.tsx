@@ -1,18 +1,13 @@
+import { BannerArtwork } from "@/components/BannerArtwork";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Plus,
-  Users,
-  Radio,
-  FileText,
-  UserRound,
-  Zap,
-} from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 import { AdminLayout } from "./admin";
 import { AccessNotification } from "@/components/AccessNotification";
-import { clientsStore, type ClientRecord } from "@/lib/storage";
+import { clientData, clientsStore, type ClientRecord } from "@/lib/storage";
+import { clientPreparation } from "@/lib/clientPreparation";
+import { PreparationGuide } from "@/components/PreparationGuide";
 import { appAuth } from "@/lib/appAuth";
 import { ClientAvatar } from "@/components/ClientAvatar";
 
@@ -20,7 +15,19 @@ export const Route = createFileRoute("/dashboard/")({
   validateSearch: (search: Record<string, unknown>): { added?: string } => ({
     added: typeof search.added === "string" ? search.added : undefined,
   }),
-  head: () => ({ meta: [{ title: "Visão geral · Senha Baixa" }] }),
+  head: () => ({
+    meta: [
+      { title: "Visão geral · Senha Baixa" },
+      { name: "description", content: "Resumo das suas clientes e atendimentos no Senha Baixa." },
+      { property: "og:title", content: "Visão geral · Senha Baixa" },
+      {
+        property: "og:description",
+        content: "Resumo das suas clientes e atendimentos no Senha Baixa.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: () => <AdminLayout content={<DashboardHome />} />,
 });
 
@@ -52,84 +59,88 @@ function DashboardHome() {
   }, [notice]);
 
   const connected = clients.filter((client) => client.hasSession).length;
+  const preparation = clients.map((client) => ({
+    client,
+    ...clientPreparation(client, clientData.getGroups(client.id)),
+  }));
+  const pending = preparation.filter((item) => !item.ready);
+  const readyCount = preparation.length - pending.length;
   const name = appAuth.current()?.split(/[._-]/)[0] || "";
   const stats = [
     {
       label: "Suas clientes",
       value: clients.length,
-      Icon: Users,
+      icon: "clients" as const,
       detail: "Sua base de atendimentos",
     },
     {
-      label: "Contas conectadas",
+      label: "Sessões salvas",
       value: connected,
-      Icon: Radio,
+      icon: "connections" as const,
       detail: "Sessões Telegram salvas",
     },
     {
       label: "A reconectar",
       value: clients.length - connected,
-      Icon: Zap,
+      icon: "authorization" as const,
       detail: "Contas que precisam de atenção",
     },
     {
       label: "Clientes fixadas",
       value: clients.filter((client) => client.pinned).length,
-      Icon: FileText,
-      detail: "Sempre à mão na sua lista",
+      icon: "identity" as const,
+      detail: "Clientes fixadas no topo da lista",
     },
   ];
 
   return (
     <main className="sb-page">
       <AccessNotification open={notice} title="Cliente adicionada com sucesso" />
-      <div className="sb-page-header">
-        <div>
-          <p className="sb-eyebrow">SENHA BAIXA</p>
-          <h1 className="mt-2">
-            Visão geral<span className="text-muted-foreground">.</span>
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Olá{name ? `, ${name}` : ""}. Aqui está o resumo das suas contas.
-          </p>
-        </div>
-        <Link to="/dashboard/cadastro" className="sb-button">
-          <Plus className="size-4" /> Adicionar cliente
-        </Link>
-      </div>
       <section className="sb-hero">
         <div className="sb-hero-copy">
-          <span className="sb-art-pill">CLIENTES E ATENDIMENTOS</span>
-          <h2>
-            Suas clientes
-            <br />
-            e seus grupos.
-            <br />
-            <span>Contas e rascunhos.</span>
-          </h2>
+          <span className="sb-art-pill">VISÃO GERAL</span>
+          <h1>
+            Olá{name ? `, ${name}` : ""}.<br />
+            Aqui está o resumo das suas contas.
+          </h1>
           <p>
-            Contas, grupos e rascunhos juntos.
-            <br />
-            Abra uma cliente para preparar o envio.
+            Organize as contas, confira os grupos e deixe as mensagens preparadas para o próximo
+            atendimento.
           </p>
-          <Link to="/dashboard/unico" className="sb-button mt-6">
-            Gerenciar minhas clientes <ArrowUpRight className="size-4" />
-          </Link>
         </div>
-        <div className="sb-hero-art">
-          <img
-            src="/art/cat-hero.svg"
-            alt="Gato estiloso de óculos em arte colorida"
-            fetchPriority="high"
-          />
+        <div className="sb-hero-support">
+          <dl className="sb-banner-highlights">
+            <div>
+              <dt>Preparadas</dt>
+              <dd>{readyCount}</dd>
+            </div>
+            <div>
+              <dt>Com pendências</dt>
+              <dd>{pending.length}</dd>
+            </div>
+            <div>
+              <dt>Grupos ativos</dt>
+              <dd>{preparation.reduce((total, item) => total + item.activeGroups, 0)}</dd>
+            </div>
+          </dl>
+          <div className="sb-hero-actions mt-6 flex w-full max-w-[280px] flex-col gap-3">
+            <Link to="/dashboard/clientes" className="sb-button w-full justify-between">
+              Gerenciar clientes <ArrowUpRight className="size-4" aria-hidden />
+            </Link>
+            <Link to="/dashboard/cadastro" className="sb-button w-full justify-between">
+              Adicionar cliente <Plus className="size-4" aria-hidden />
+            </Link>
+          </div>
         </div>
+        <BannerArtwork image="/art/cat-hero.svg" className="sb-hero-art" priority />
       </section>
+      <PreparationGuide />
       <section className="sb-stats" aria-label="Resumo da sua conta">
-        {stats.map(({ label, value, Icon, detail }) => (
+        {stats.map(({ label, value, icon, detail }) => (
           <article key={label}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-muted-foreground">{label}</span>
-              <Icon className="size-4 text-muted-foreground" strokeWidth={1.5} />
+              <WorkspaceIcon variant={icon} className="size-[18px] text-muted-foreground" />
             </div>
             <p className="my-3 text-3xl font-medium tracking-tight tabular-nums">
               {String(value).padStart(2, "0")}
@@ -146,7 +157,7 @@ function DashboardHome() {
               <span className="ml-2 text-xs text-muted-foreground">{clients.length}</span>
             </h2>
             <Link
-              to="/dashboard/unico"
+              to="/dashboard/clientes"
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-white"
             >
               Ver todas <ArrowUpRight className="size-3.5" />
@@ -155,7 +166,7 @@ function DashboardHome() {
           {clients.length === 0 ? (
             <div className="sb-empty">
               <span className="sb-empty-icon">
-                <Users className="size-6" strokeWidth={1.5} />
+                <WorkspaceIcon variant="clients" className="size-6" />
               </span>
               <h3>Nenhuma cliente cadastrada.</h3>
               <p>
@@ -171,8 +182,8 @@ function DashboardHome() {
               {clients.slice(0, 4).map((client) => (
                 <Link
                   key={client.id}
-                  to="/dashboard/unico/$clientId"
-                  params={{ clientId: client.id }}
+                  to="/dashboard/clientes"
+                  search={{ client: client.id }}
                   className="sb-client-row"
                 >
                   <ClientAvatar name={client.title} />
@@ -196,7 +207,7 @@ function DashboardHome() {
           <h2 className="mt-2 text-lg">Abrir atendimento</h2>
           <div className="mt-5 space-y-2">
             <Link to="/dashboard/unico" className="sb-mode">
-              <UserRound className="size-5" strokeWidth={1.5} />
+              <WorkspaceIcon variant="single" className="size-5" />
               <div>
                 <h3>Atendimento único</h3>
                 <p>Monitorar uma conta Telegram.</p>
@@ -204,16 +215,18 @@ function DashboardHome() {
               <ArrowUpRight className="ml-auto size-4" />
             </Link>
             <Link to="/dashboard/multi" className="sb-mode">
-              <Users className="size-5" strokeWidth={1.5} />
+              <WorkspaceIcon variant="multi" className="size-5" />
               <div>
-                <h3>Atendimento múltiplo</h3>
+                <h3>Atendimento multi</h3>
                 <p>Monitorar várias contas juntas.</p>
               </div>
               <ArrowUpRight className="ml-auto size-4" />
             </Link>
           </div>
           <div className="sb-tip">
-            <img src="/art/cat-note.svg" alt="" loading="lazy" />
+            <span className="grid size-12 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground">
+              <WorkspaceIcon variant="confirmation" className="size-6" />
+            </span>
             <div>
               <p className="text-xs font-medium">Confira antes de iniciar</p>
               <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
@@ -223,12 +236,54 @@ function DashboardHome() {
           </div>
         </section>
       </div>
-      <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-[10px] tracking-wider text-muted-foreground">
-        <span>SENHA BAIXA © {new Date().getFullYear()}</span>
-        <span className="flex items-center gap-1.5">
-          <CheckCircle2 className="size-3.5" /> Painel de atendimento
-        </span>
-      </footer>
+      {pending.length > 0 && (
+        <section className="sb-panel mt-6 overflow-hidden" aria-label="Pendências de preparação">
+          <div className="border-b border-border p-5">
+            <p className="sb-eyebrow">PRÓXIMOS PASSOS</p>
+            <h2 className="mt-2 text-lg">O que falta preparar</h2>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">
+              Pendências do cadastro salvo. A disponibilidade das contas deve ser consultada em
+              Conexões.
+            </p>
+          </div>
+          <ul className="divide-y divide-border">
+            {pending.slice(0, 5).map(({ client, issues }) => (
+              <li key={client.id} className="flex flex-wrap items-center gap-3 p-5">
+                <ClientAvatar name={client.title} />
+                <div className="min-w-0 flex-1 basis-40">
+                  <p className="break-words text-sm font-medium">{client.title}</p>
+                  <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                    {issues.join(" · ")}
+                  </p>
+                </div>
+                {client.hasSession ? (
+                  <Link
+                    to="/dashboard/unico/$clientId"
+                    params={{ clientId: client.id }}
+                    className="sb-button-secondary"
+                  >
+                    Revisar grupos <ArrowUpRight className="size-3" aria-hidden />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/dashboard/cadastro"
+                    search={{ id: client.id }}
+                    className="sb-button-secondary"
+                  >
+                    Reconectar <ArrowUpRight className="size-3" aria-hidden />
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+          {pending.length > 5 && (
+            <p className="border-t border-border p-5 text-xs text-muted-foreground">
+              Mais {pending.length - 5} clientes com pendências. Consulte a lista completa em Minhas
+              clientes.
+            </p>
+          )}
+        </section>
+      )}
     </main>
   );
 }

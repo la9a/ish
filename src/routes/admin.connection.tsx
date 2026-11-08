@@ -1,3 +1,5 @@
+import { ClientAvatar } from "@/components/ClientAvatar";
+import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -20,6 +22,7 @@ import { miamiActiveAccounts } from "@/lib/miamiAgent.functions";
 import { formatDisplayPhone } from "@/lib/countries";
 import { Button } from "@/components/ui/button";
 import { PageBanner } from "@/components/PageBanner";
+import { compareConnectionAccounts } from "@/lib/connectionOrder";
 import {
   Select,
   SelectContent,
@@ -42,6 +45,13 @@ export const Route = createFileRoute("/admin/connection")({
   head: () => ({
     meta: [
       { title: "Conexões | Senha Baixa" },
+      { property: "og:title", content: "Conexões | Senha Baixa" },
+      {
+        property: "og:description",
+        content: "Consulte as conexões e reconecte as contas das suas clientes.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         name: "description",
         content: "Consulte as conexões e reconecte as contas das suas clientes.",
@@ -80,6 +90,8 @@ function ConnectionPage() {
   const [checkError, setCheckError] = useState("");
   const [removing, setRemoving] = useState<ClientRecord | null>(null);
   const [disconnecting, setDisconnecting] = useState<ClientRecord | null>(null);
+  const [editing, setEditing] = useState<ClientRecord | null>(null);
+  const [editNotice, setEditNotice] = useState("");
   const mounted = useRef(false);
   const checkingRef = useRef(false);
 
@@ -129,7 +141,16 @@ function ConnectionPage() {
   }, []);
 
   function edit(client: ClientRecord) {
-    navigate({ to: "/dashboard/cadastro", search: { id: client.id, edit: "1" } });
+    setEditNotice("");
+    setEditing(client);
+  }
+  function closeEditor() {
+    setEditing(null);
+  }
+  function savedEdit() {
+    reload();
+    setEditing(null);
+    setEditNotice("Dados atualizados.");
   }
   function reconnect(client: ClientRecord) {
     navigate({ to: "/dashboard/cadastro", search: { id: client.id } });
@@ -159,10 +180,7 @@ function ConnectionPage() {
         (filter === "all" || (filter === "saved" ? client.hasSession : !client.hasSession))
       );
     })
-    .sort(
-      (a, b) =>
-        Number(a.hasSession) - Number(b.hasSession) || a.title.localeCompare(b.title, "pt-BR"),
-    );
+    .sort(compareConnectionAccounts);
 
   return (
     <main className="sb-page">
@@ -172,6 +190,12 @@ function ConnectionPage() {
         description="Consulte as contas das suas clientes e veja quais precisam ser reconectadas."
         image="/art/cat-connect.svg"
         tone="lime"
+        highlights={[
+          { label: "Cadastradas", value: clients.length },
+          { label: "Sessões salvas", value: saved },
+          { label: "Sem sessão", value: clients.length - saved },
+        ]}
+        hint="Verifique as conexões para consultar o estado atual no agente de envio."
         compact
       >
         <Button
@@ -182,6 +206,17 @@ function ConnectionPage() {
           <RefreshCw className={`size-4 ${checking ? "animate-spin" : ""}`} aria-hidden />
           {checking ? "Consultando contas…" : "Verificar conexões"}
         </Button>
+        <button
+          type="button"
+          className="sb-button-secondary"
+          aria-pressed={filter === "reconnect"}
+          onClick={() => {
+            setFilter(filter === "reconnect" ? "all" : "reconnect");
+            setQuery("");
+          }}
+        >
+          {filter === "reconnect" ? "Mostrar todas" : "Ver contas sem sessão"}
+        </button>
       </PageBanner>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Resumo das conexões">
@@ -241,6 +276,12 @@ function ConnectionPage() {
         </p>
       </div>
 
+      {editNotice && (
+        <p role="status" className="mt-4 text-xs text-success">
+          {editNotice}
+        </p>
+      )}
+
       <section className="sb-panel mt-6 overflow-hidden" aria-label="Contas e conexões">
         <div className="sb-section-head flex flex-wrap items-center justify-between gap-4 border-b border-border p-5">
           <div>
@@ -286,12 +327,7 @@ function ConnectionPage() {
                 key={client.id}
                 className="flex flex-wrap items-center gap-x-4 gap-y-4 p-5 sm:px-6"
               >
-                <span
-                  className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-background text-sm font-medium"
-                  aria-hidden
-                >
-                  {client.title.charAt(0).toUpperCase()}
-                </span>
+                <ClientAvatar name={client.title} />
                 <div className="min-w-0 flex-1 basis-40">
                   <h3 className="truncate text-sm font-medium">{client.title}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -327,16 +363,17 @@ function ConnectionPage() {
                   )}
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-4 sm:ml-auto sm:w-auto sm:border-0 sm:pt-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    aria-label={`Editar ${client.title}`}
+                    onClick={() => edit(client)}
+                  >
+                    <Pencil className="size-3.5" aria-hidden /> Editar
+                  </Button>
                   {client.hasSession ? (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => edit(client)}
-                      >
-                        <Pencil className="size-3.5" aria-hidden /> Editar
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -401,6 +438,8 @@ function ConnectionPage() {
           <span>Dados da sua conta</span>
         </div>
       </section>
+
+      <ClientEditDialog client={editing} onClose={closeEditor} onSaved={savedEdit} />
 
       <AlertDialog
         open={!!removing}

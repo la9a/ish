@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="440" viewBox="0 0 1600 440" fill="none" role="img" aria-labelledby="title desc" data-artwork-layer="background">
+  <title id="title">Fundo da cena add-group</title>
+  <desc id="desc">Composição abstrata em cores suaves com gradiente, textura, órbitas e estrelas. Sem personagem.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BFDCD5" />
+      <stop offset=".5" stop-color="#D1E8CA" />
+      <stop offset="1" stop-color="#E5EDB6" />
+    </linearGradient>
+    <pattern id="grain" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r=".75" fill="#6B4F79" fill-opacity=".07" />
+    </pattern>
+    <clipPath id="canvas">
+      <rect width="1600" height="440" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#canvas)">
+    <rect width="1600" height="440" fill="url(#bg)" />
+    <rect width="1600" height="440" fill="url(#grain)" />
+    <circle cx="1630" cy="-65" r="268" fill="#E9C9DE" />
+    <circle cx="-90" cy="550" r="290" fill="#FFF2DD" fill-opacity=".32" />
+    <path d="M-100 178C177-5 545 20 855 151C1110 252 1360 254 1730 95" stroke="#FFF4E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".42" />
+    <path d="M-126 207C169 29 526 49 849 182C1110 288 1384 289 1717 135" stroke="#FFF4E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".22" />
+    <path d="M-60 418C336 469 686 307 1009 312C1267 317 1404 459 1680 404" stroke="#FFF4E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".3" />
+    <ellipse cx="1220" cy="245" rx="353" ry="143" transform="rotate(-15 1220 245)" stroke="#775E84" stroke-opacity=".2" />
+    <path d="M66 310L70.75 324.25L85 329L70.75 333.75L66 348L61.25 333.75L47 329L61.25 324.25Z" fill="#FFF4E1" />
+    <path d="M940 56L944.0 68.0L956 72L944.0 76.0L940 88L936.0 76.0L924 72L936.0 68.0Z" fill="#FFF4E1" />
+    <path d="M1540 77L1545.75 94.25L1563 100L1545.75 105.75L1540 123L1534.25 105.75L1517 100L1534.25 94.25Z" fill="#65506E" />
+    <circle cx="165" cy="53" r="4" fill="#FFF4E5" />
+    <circle cx="1065" cy="382" r="4" fill="#8E7198" />
+  </g>
+</svg>

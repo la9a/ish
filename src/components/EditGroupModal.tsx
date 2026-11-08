@@ -1,3 +1,4 @@
+import { BannerArtwork } from "@/components/BannerArtwork";
 import { Check, Hash, Send } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import {
@@ -61,25 +62,20 @@ export function EditGroupModal({ group, onOpenChange, onSaved, clientId }: Props
         className="flex max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
-        <DialogHeader className="relative shrink-0 overflow-hidden border-b border-border bg-card px-5 py-6 text-left sm:px-7">
-          <div className="relative z-10 max-w-[80%]">
-            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-background/50 px-2 py-1 text-[9px] uppercase tracking-[.14em] text-muted-foreground">
-              <span className="text-foreground">02</span>Mensagem
+        <DialogHeader className="sb-illustrated-header">
+          <div className="sb-illustrated-copy">
+            <span className="inline-flex items-center gap-2 rounded-md border border-black/20 bg-white/20 px-2 py-1 text-[9px] uppercase tracking-[.14em] text-black/70">
+              <span className="text-black">02</span>Mensagem
               <span className="text-border">/</span>Grupo cadastrado
             </span>
             <DialogTitle className="mt-4 text-2xl font-medium tracking-tight">
               Editar rascunho
             </DialogTitle>
-            <DialogDescription className="mt-2 text-xs text-muted-foreground">
+            <DialogDescription className="mt-2 text-xs text-black/70">
               Atualize a mensagem preparada para este grupo.
             </DialogDescription>
           </div>
-          <img
-            src="/art/cat-note.svg"
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-6 -bottom-12 h-44 w-44 rotate-[-12deg] object-cover opacity-80 sm:right-4"
-          />
+          <BannerArtwork image="/art/cat-edit-draft.svg" className="sb-header-art" />
         </DialogHeader>
         {group && (
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-7">

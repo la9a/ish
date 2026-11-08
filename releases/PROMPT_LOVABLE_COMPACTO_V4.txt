@@ -1,0 +1,61 @@
+APLIQUE A REVISÃO COMPACTA V4 DO SENHA BAIXA
+
+Referências de código e pacote completo:
+https://github.com/la9a/ish
+https://github.com/la9a/ish/blob/main/releases/senhabaixa-compacto-v4.zip
+
+Objetivo: corrigir controles brancos, manter os banners compactos na vertical e na horizontal e usar o gato de reconexão com o mesmo estilo de olhos da coleção, conectando dois servidores. Use a implementação entregue no repositório como base. Preserve os demais gatos, cores e funções já existentes.
+
+1. MINHAS CLIENTES E CONTROLES ESCUROS
+
+As linhas que expandem os detalhes da cliente, os ícones de fixar/desafixar e os filtros devem ter fundo escuro ou transparente sobre o painel escuro. Não devem virar pílulas brancas.
+
+Integre as classes sb-directory-toggle, sb-pin-toggle, sb-text-action e sb-select-trigger. O fundo e a cor desses controles são explícitos no CSS, para que o estilo padrão de button do navegador ou do editor não prevaleça. Não aplique um fundo branco genérico a todos os botões; preserve os CTAs que já têm um estilo próprio.
+
+Os gatilhos dos dropdowns e os menus abertos de Status e Preparação devem permanecer escuros. Opções selecionadas, foco e hover usam cinzas escuros com texto claro. Preserve a navegação por teclado, os rótulos acessíveis e o estado aria-expanded/aria-pressed.
+
+A barra de busca ocupa uma linha no celular; os dois filtros ficam lado a lado logo abaixo. As linhas de clientes mantêm altura compacta nas duas orientações, sem espaços grandes acima ou abaixo dos nomes. Manter a expansão dos detalhes, fixação, pesquisa e isolamento por operador.
+
+2. BANNERS COMPACTOS NAS DUAS ORIENTAÇÕES
+
+Em retrato, não coloque o gato em um grande bloco separado embaixo do texto. Mantenha título/descrição à esquerda e arte à direita. Coloque indicadores, ações e observações em uma faixa de apoio que use a largura disponível abaixo desse cabeçalho. Em telas maiores, a arte ocupa a coluna da direita, com o conteúdo na esquerda.
+
+PageBanner usa sb-banner-copy e sb-banner-support em áreas distintas do grid. A visão geral usa sb-hero-copy e sb-hero-support. Replique as regras entregues, removendo ou substituindo as regras responsivas antigas que empilham a ilustração ou impõem a mesma altura fixa de 360px para todos os banners.
+
+Não resolva isso cortando textos ou colocando o gato atrás das letras. A altura deve acompanhar o conteúdo, com tipografia legível, títulos que podem quebrar linha e botões utilizáveis no celular. Os testes da revisão cobrem larguras de 360 a 1440px e verificam que texto, ações e arte não se sobrepõem. Os cabeçalhos dos modais e a ajuda do cadastro também mantêm composição horizontal compacta.
+
+3. GATO DA RECONEXÃO
+
+Use EXATAMENTE a nova arte local public/art/cat-reconnect-servers.png. A seleção em src/components/BannerArtwork.tsx deve priorizar essa imagem para /art/cat-reconnect.svg, antes dos mapeamentos antigos do Lovable ou dos arquivos .asset.json.
+
+O gato verde tem olhos amendoados com pálpebras relaxadas, íris lilás e pupilas verticais no estilo dos outros gatos aprovados. Há dois servidores violetas, um de cada lado. Cada servidor tem seu próprio cabo ligado ao conector que o gato segura; as pontas ficam voltadas uma para a outra, prontas para conectar.
+
+Não usar a versão antiga com olhos redondos, celular ligado ao servidor ou cabo formando um laço que conecta a si mesmo. Mantenha os dois servidores completos dentro da moldura, sem cortar orelhas, patas ou equipamentos. Não redesenhe os outros gatos.
+
+4. PRESERVAR A APLICAÇÃO
+
+Preserve login, autenticação, isolamento de dados, chaves de acesso, limites, cadastro e recuperação, grupos e rascunhos, filtros de preparação, seleção de até 20 contas e monitoramento.
+
+Não altere o motor de envio, a detecção de abertura, locks contra duplicidade, confirmação de mensagens ou cálculo da senha para aplicar esta revisão visual. Não reinstale ou modifique a VPS. Não faça envios reais para testar aparência.
+
+Reutilize os segredos existentes no projeto; não crie chaves novas e não troque SESSION_ENCRYPTION_KEY. Não exponha segredos em variáveis VITE_. Não copie fixtures dos testes para produção e não aplique migrações de banco por causa desta revisão.
+
+5. VALIDAÇÃO E ENTREGA
+
+Use Node 24 e Bun 1.3.13, preservando bun.lock.
+bun install --frozen-lockfile
+bun run typecheck
+bun run test
+bun run build
+
+Para o navegador, siga docs/VALIDATION.md e docs/ATUALIZACOES_V4.md. Há uma suíte nova SMOKE_COMPACT_ONLY=1 para retrato/paisagem, cores dos controles e arte de reconexão, além da suíte SMOKE_BANNERS_ONLY=1 e dos fluxos completos de cadastro e monitoramento.
+
+Confira visualmente em 360x800, 390x844, 844x390 e desktop:
+- Nenhuma linha, botão de fixar ou dropdown branco em Minhas clientes.
+- Menus abertos, seleção, hover e foco continuam escuros e legíveis.
+- Banners com texto à esquerda e gato à direita nas duas orientações, sem grande área vazia abaixo.
+- Controles e listas com altura compacta e sem rolagem horizontal.
+- Reconexão com olhos no estilo da coleção e dois servidores, sem celular.
+- Cadastros, confirmações, falhas e monitoramento continuam funcionando.
+
+Ao concluir, descreva o que foi aplicado e quais verificações executou. Não trate imagens de teste ou mocks como prova de funcionamento do Telegram ou da VPS de produção.

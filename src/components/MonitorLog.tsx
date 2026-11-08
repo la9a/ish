@@ -9,7 +9,10 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { LogEntry } from "@/lib/telegram";
-import { formatBrasiliaHMS } from "@/lib/brasiliaTime";
+import { formatBrasiliaClock } from "@/lib/clockFormat";
+import { useClockFormat } from "@/lib/useClockFormat";
+import { Button } from "@/components/ui/button";
+import { pendingPositionParts } from "@/lib/pendingPosition";
 
 const levels = {
   info: {
@@ -40,11 +43,14 @@ export function MonitorLog({
   entries,
   showTime = true,
   isMonitoring = false,
+  onClear,
 }: {
   entries: LogEntry[];
   showTime?: boolean;
   isMonitoring?: boolean;
+  onClear?: () => void;
 }) {
+  const [clockFormat] = useClockFormat();
   const ref = useRef<HTMLDivElement>(null);
   const following = useRef(true);
   const [showLatest, setShowLatest] = useState(false);
@@ -55,6 +61,17 @@ export function MonitorLog({
     if (following.current) ref.current.scrollTop = ref.current.scrollHeight;
     else setShowLatest(true);
   }, [entries]);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    // The phone tabs retain the mounted log; follow the tail when it becomes visible.
+    const observer = new ResizeObserver(() => {
+      if (following.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   function jumpToLatest() {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
@@ -67,21 +84,33 @@ export function MonitorLog({
       className="sb-panel relative overflow-hidden"
       aria-label="Histórico de eventos do atendimento"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <Activity className="size-4 text-muted-foreground" aria-hidden />
-          <span className="text-xs font-medium">Histórico do atendimento</span>
-          <span className="text-[10px] tabular-nums text-muted-foreground">
-            {entries.length} {entries.length === 1 ? "evento" : "eventos"}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3 sm:px-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <Activity className="size-4 text-muted-foreground" aria-hidden />
+            <h2 className="text-sm font-medium">Eventos</h2>
+            <span className="text-[10px] tabular-nums text-muted-foreground">{entries.length}</span>
+          </div>
+          <span className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span
+              className={`size-1.5 rounded-full ${isMonitoring ? "bg-success motion-safe:animate-pulse" : "bg-muted-foreground/50"}`}
+              aria-hidden
+            />
+            {isMonitoring ? "Monitoramento em andamento" : "Monitoramento parado"}
           </span>
         </div>
-        <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <span
-            className={`size-1.5 rounded-full ${isMonitoring ? "bg-success motion-safe:animate-pulse" : "bg-muted-foreground/50"}`}
-            aria-hidden
-          />
-          {isMonitoring ? "Monitoramento em andamento" : "Monitoramento parado"}
-        </span>
+        {onClear && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            disabled={!entries.length}
+            className="h-9 px-3 text-xs"
+          >
+            Limpar
+          </Button>
+        )}
       </header>
       <div
         ref={ref}
@@ -95,14 +124,15 @@ export function MonitorLog({
           following.current = element.scrollHeight - element.scrollTop - element.clientHeight < 32;
           if (following.current) setShowLatest(false);
         }}
-        className="h-80 overflow-y-auto overscroll-auto px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="h-[min(60dvh,30rem)] min-h-60 overflow-y-auto overscroll-contain px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4 min-[900px]:h-[32rem]"
       >
         {visibleEntries.length ? (
           <ol className="space-y-0">
             {visibleEntries.map((entry, index) => {
               const { label, Icon, color, border } = levels[entry.level];
+              const pendingPosition = pendingPositionParts(entry.msg, entry.pending);
               return (
-                <li key={entry.id} className="relative flex gap-3 pb-5 last:pb-0">
+                <li key={entry.id} className="relative flex gap-2.5 pb-4 last:pb-0">
                   {index < visibleEntries.length - 1 && (
                     <span
                       className="absolute bottom-0 left-[13px] top-7 w-px bg-border"
@@ -128,13 +158,31 @@ export function MonitorLog({
                           dateTime={new Date(entry.ts).toISOString()}
                           className="text-[10px] tabular-nums text-muted-foreground"
                         >
-                          {formatBrasiliaHMS(new Date(entry.ts))}
+                          {formatBrasiliaClock(entry.ts, clockFormat)}
                           <span className="sr-only">, horário de Brasília</span>
                         </time>
                       )}
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-xs leading-6 text-foreground/85">
-                      {entry.msg}
+                    <p className="whitespace-pre-wrap break-words text-xs leading-5 text-foreground/85">
+                      {pendingPosition ? (
+                        <>
+                          {pendingPosition.before}
+                          <span
+                            role="status"
+                            aria-label="Apurando senha"
+                            className="mx-0.5 inline-flex align-middle"
+                          >
+                            <LoaderCircle
+                              className="size-3.5 motion-safe:animate-spin"
+                              aria-hidden
+                            />
+                            <span className="sr-only">Apurando senha</span>
+                          </span>
+                          {pendingPosition.after}
+                        </>
+                      ) : (
+                        entry.msg
+                      )}
                     </p>
                   </div>
                 </li>
@@ -153,25 +201,19 @@ export function MonitorLog({
           </div>
         )}
       </div>
-      {(entries.length > 300 || showLatest) && (
-        <footer className="flex items-center justify-between gap-3 border-t border-border px-5 py-2.5 text-[10px] text-muted-foreground">
-          <span>
-            {entries.length > 300
-              ? "Exibindo os 300 eventos mais recentes"
-              : "O histórico foi atualizado"}
-          </span>
-          {showLatest && (
-            <button
-              type="button"
-              onClick={jumpToLatest}
-              className="inline-flex min-h-8 items-center gap-1.5 text-foreground"
-            >
-              <ArrowDown className="size-3" aria-hidden />
-              Ir ao mais recente
-            </button>
-          )}
-        </footer>
-      )}
+      {(entries.length > 300 || showLatest) && <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5 text-[10px] text-muted-foreground sm:px-4">
+        {entries.length > 300 && <span>Exibindo os 300 eventos mais recentes</span>}
+        {showLatest && (
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className="inline-flex min-h-8 items-center gap-1.5 text-foreground"
+          >
+            <ArrowDown className="size-3" aria-hidden />
+            Ir ao mais recente
+          </button>
+        )}
+      </footer>}
     </section>
   );
 }

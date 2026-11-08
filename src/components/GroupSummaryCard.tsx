@@ -1,4 +1,4 @@
-import { FileText, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TgAvatar } from "@/components/TgAvatar";
@@ -32,9 +32,9 @@ export function GroupSummaryCard({
   const label = censorName ? "este grupo" : group.name;
   return (
     <article
-      className={`overflow-hidden rounded-lg border border-border bg-background ${group.active ? "" : "opacity-70"}`}
+      className={`overflow-hidden rounded-lg border border-border bg-background/60 ${group.active ? "" : "opacity-70"}`}
     >
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2.5 px-3 py-3 sm:px-4">
         {showIcon &&
           (group.photoUrl ? (
             <img
@@ -51,7 +51,7 @@ export function GroupSummaryCard({
           ))}
         <div className="min-w-0 flex-1 basis-28">
           <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <MessageCircle className="size-3" aria-hidden /> Grupo Telegram
+            Grupo
           </span>
           <h4 className={`mt-1 truncate text-sm font-medium ${censorName ? "censor-text" : ""}`}>
             {group.name}
@@ -62,21 +62,21 @@ export function GroupSummaryCard({
             className={`size-1.5 rounded-full ${group.active ? "bg-foreground" : "bg-muted-foreground/50"}`}
             aria-hidden
           />
-          {group.active ? "Habilitado para envio" : "Envio desativado"}
+          {group.active ? "Envio ativo" : "Envio desativado"}
         </span>
       </div>
-      <div className="border-t border-border px-4 py-3">
+      <div className="border-t border-border px-3 py-3 sm:px-4">
         <p className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
           <FileText className="size-3" aria-hidden /> Rascunho
         </p>
         <p
-          className={`mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 ${censorDraft ? "censor-text" : ""} ${group.message.trim() ? "text-foreground/85" : "text-muted-foreground"}`}
+          className={`mt-1.5 whitespace-pre-wrap break-words text-[13px] leading-5 ${censorDraft ? "censor-text" : ""} ${group.message.trim() ? "text-foreground/85" : "text-muted-foreground"}`}
         >
           {group.message.trim() ? group.message : "Nenhum rascunho cadastrado."}
         </p>
       </div>
       {editing && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2.5 sm:px-4">
           <label className="flex items-center gap-2.5 text-xs text-muted-foreground">
             <Switch
               checked={group.active}

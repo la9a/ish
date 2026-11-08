@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="440" viewBox="0 0 1600 440" fill="none" role="img" aria-labelledby="title desc" data-artwork-layer="background">
+  <title id="title">Fundo da cena hero</title>
+  <desc id="desc">Composição abstrata em cores suaves com gradiente, textura, órbitas e estrelas. Sem personagem.</desc>
+  <defs>
+    <linearGradient id="wide-bg" x1="0" y1="10" x2="1600" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#BDA7FF" />
+      <stop offset=".48" stop-color="#D2BFFF" />
+      <stop offset="1" stop-color="#ED9ECA" />
+    </linearGradient>
+    <radialGradient id="wide-light" cx="0" cy="0" r="1" gradientTransform="translate(610 115) rotate(10) scale(950 500)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7E6FF" stop-opacity=".22" />
+      <stop offset="1" stop-color="#F7E6FF" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="wide-canvas">
+      <rect width="1600" height="440" />
+    </clipPath>
+    <pattern id="wide-grain" width="11" height="11" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r=".8" fill="#544264" fill-opacity=".08" />
+    </pattern>
+  </defs>
+  <g clip-path="url(#wide-canvas)">
+    <rect width="1600" height="440" fill="url(#wide-bg)" />
+    <rect width="1600" height="440" fill="url(#wide-light)" />
+    <circle cx="1610" cy="-95" r="278" fill="#D9FA88" />
+    <circle cx="-87" cy="558" r="299" fill="#F7E6FF" fill-opacity=".48" />
+    <circle cx="888" cy="-178" r="300" fill="#F7E6FF" fill-opacity=".13" />
+    <rect width="1600" height="440" fill="url(#wide-grain)" />
+    <path d="M-120 182C187-4 525 18 848 147C1090 244 1362 267 1722 95" stroke="#F7E6FF" stroke-opacity=".43" stroke-width="1.4" />
+    <path d="M-145 209C164 20 518 46 844 177C1090 277 1373 296 1710 135" stroke="#F7E6FF" stroke-opacity=".23" stroke-width="1.4" />
+    <path d="M-70 414C345 481 674 302 1002 309C1271 315 1392 454 1665 407" stroke="#F7E6FF" stroke-opacity=".3" stroke-width="1.4" />
+    <ellipse cx="1192" cy="241" rx="384" ry="140" transform="rotate(-15 1192 241)" stroke="#544264" stroke-opacity=".25" stroke-width="1" />
+    <circle cx="162" cy="48" r="4" fill="#F7E6FF" fill-opacity=".8" />
+    <circle cx="860" cy="381" r="5" fill="#544264" fill-opacity=".35" />
+    <circle cx="1534" cy="332" r="5" fill="#544264" fill-opacity=".7" />
+    <circle cx="1079" cy="53" r="3" fill="#F7E6FF" fill-opacity=".9" />
+    <path d="M65 309L70.0 324.0L85 329L70.0 334.0L65 349L60.0 334.0L45 329L60.0 324.0Z" fill="#F7E6FF" fill-opacity=".7" />
+    <path d="M930 40L934.5 53.5L948 58L934.5 62.5L930 76L925.5 62.5L912 58L925.5 53.5Z" fill="#F7E6FF" fill-opacity=".7" />
+    <path d="M1543 69L1549.0 87.0L1567 93L1549.0 99.0L1543 117L1537.0 99.0L1519 93L1537.0 87.0Z" fill="#544264" fill-opacity=".7" />
+    <path d="M1073 337C1046 372 1089 398 1150 382M1462 123C1510 106 1557 117 1575 146" stroke="#F7E6FF" stroke-width="1.8" stroke-opacity=".7" stroke-linecap="round" />
+    <g transform="translate(850 -10) scale(.66)" data-artwork-layer="background-decoration">
+      <path d="M430 442C424 479 467 496 539 491M851 275C938 258 985 276 987 308C990 351 935 399 852 439" stroke="#FAF5E8" stroke-width="2" stroke-linecap="round" />
+      <circle cx="479" cy="489" r="7" fill="#FCF6E6" />
+      <path d="M935 73L945 100L971 110L945 120L935 146L925 120L899 110L925 100L935 73Z" fill="#28232D" />
+      <g opacity=".45" stroke="#3F3455" stroke-width="1.5">
+        <path d="M235 489V509M225 499H245M419 248V262M412 255H426M871 79V93M864 86H878" />
+      </g>
+    </g>
+  </g>
+</svg>

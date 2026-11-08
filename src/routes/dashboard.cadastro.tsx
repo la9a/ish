@@ -1,3 +1,4 @@
+import { BannerArtwork } from "@/components/BannerArtwork";
 import { AdminLayout } from "./admin";
 import { createFileRoute, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,17 +10,7 @@ import { Label } from "@/components/ui/label";
 import { activeClient, clientsStore, clientData, storage, wizardDraft } from "@/lib/storage";
 import { sendCode, signIn, resendCode, resetPooledClient } from "@/lib/telegram";
 import { mtSendPassword, mtLogin, mtEnsureApp } from "@/lib/myTelegram.functions";
-import {
-  ArrowLeft,
-  Check,
-  ChevronsUpDown,
-  Loader2,
-  Lock,
-  MessageCircle,
-  Phone,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+import { ArrowLeft, Check, ChevronsUpDown, Loader2, Phone } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,10 +61,11 @@ import {
 } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AccessNotification } from "@/components/AccessNotification";
-import { RegistrationStatus } from "@/components/RegistrationStatus";
+import { RegistrationFlowDialog } from "@/components/RegistrationFlowDialog";
 import { PageBanner } from "@/components/PageBanner";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+import { ClientEditForm } from "@/components/ClientEditDialog";
 
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 // Include outgoing/incoming 300ms fades, then display for one full second.
@@ -1033,35 +1025,6 @@ function NewClientWizard() {
     return 2; // code
   }, [step]);
 
-  function saveEdit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
-    if (!title.trim()) {
-      setError("Informe o nome do cliente.");
-      return;
-    }
-    if (!editingId || !clientsStore.get(editingId)) {
-      setError("Esta cliente não foi encontrada. Volte à lista e abra o cadastro novamente.");
-      return;
-    }
-    clientsStore.update(editingId, {
-      title: title.trim(),
-      scheduleRas: schedRas.trim() || null,
-      scheduleFim: schedFim.trim() || null,
-      scheduleEnv: schedEnv.trim() || null,
-      weekdays: weekdays.length ? [...weekdays].sort() : null,
-      frequency,
-      biweeklyAnchor: frequency === "quinzenal" ? biweeklyAnchor : null,
-      monthlyDays:
-        frequency === "mensal" && monthlyDays.length
-          ? [...monthlyDays].sort((a, b) => a - b)
-          : null,
-      preferredGroup: hasPreferred ? preferredGroup.trim() || null : null,
-    });
-    setInfo("Dados atualizados.");
-  }
-
   const currentTitle = isEditMode
     ? "Dados da cliente"
     : step === "title"
@@ -1085,9 +1048,21 @@ function NewClientWizard() {
             ? "Esta conta também pede a senha de nuvem do Telegram."
             : "Digite o novo código recebido no Telegram para concluir o cadastro.";
   const steps = [
-    { title: "Dados da cliente", description: "Nome e telefone do Telegram.", icon: UserRound },
-    { title: "Autorização", description: "Permissão para conectar a conta.", icon: ShieldCheck },
-    { title: "Confirmação", description: "Último código e conta conectada.", icon: MessageCircle },
+    {
+      title: "Dados da cliente",
+      description: "Nome e telefone do Telegram.",
+      icon: "identity" as const,
+    },
+    {
+      title: "Autorização",
+      description: "Permissão para conectar a conta.",
+      icon: "authorization" as const,
+    },
+    {
+      title: "Confirmação",
+      description: "Último código e conta conectada.",
+      icon: "confirmation" as const,
+    },
   ];
   const tip = isEditMode
     ? {
@@ -1145,12 +1120,34 @@ function NewClientWizard() {
             ? "Confira e atualize os dados desta cliente."
             : "Preencha os dados, autorize a conexão e confirme a conta pelo Telegram."
         }
-        image="/art/cat-register.svg"
+        image={
+          isEditMode
+            ? "/art/cat-edit-client.svg"
+            : reconnectMode
+              ? "/art/cat-reconnect.svg"
+              : "/art/cat-register.svg"
+        }
         tone="peach"
+        highlights={
+          isEditMode
+            ? [
+                { label: "Cadastro", value: title.trim() || "Cliente" },
+                { label: "Dados", value: "Editáveis" },
+              ]
+            : [
+                { label: "Etapa", value: `${stepIdx + 1} de 3` },
+                { label: "Fluxo", value: reconnectMode ? "Reconexão" : "Nova conta" },
+              ]
+        }
+        hint={
+          reconnectMode
+            ? "Confirme o número da cliente e autorize novamente no Telegram para restaurar a sessão."
+            : "O código de autorização chega pelo Telegram. Mantenha o aplicativo da cliente acessível durante a conexão."
+        }
         compact
       />
 
-      <div className="sb-wizard-grid !mt-6">
+      <div className={cn("sb-wizard-grid !mt-6", isEditMode && "sb-wizard-edit")}>
         <section
           className="sb-wizard-main sb-panel min-w-0 p-5 sm:p-7"
           aria-busy={loading}
@@ -1169,7 +1166,7 @@ function NewClientWizard() {
             {!isEditMode && step !== "title" && (
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
                 <span className="flex items-center gap-2">
-                  <UserRound className="size-3.5" />
+                  <WorkspaceIcon variant="identity" className="size-4" />
                   {title.trim() || "Cliente"}
                 </span>
                 <span className="flex items-center gap-2 text-muted-foreground">
@@ -1188,66 +1185,11 @@ function NewClientWizard() {
               transition={fade}
             >
               {isEditMode ? (
-                <form onSubmit={saveEdit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="client-title" className="text-xs">
-                      Nome da cliente
-                    </Label>
-                    <Input
-                      id="client-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Ex.: Maria Silva"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                    <p className="text-sm font-medium sm:col-span-2">Conta do Telegram</p>
-                    <div>
-                      <Label className="text-xs flex items-center gap-1.5">
-                        Telefone <Lock className="size-3 text-muted-foreground" />
-                      </Label>
-                      <Input
-                        value={formatDisplayPhone(buildFullPhone())}
-                        disabled
-                        readOnly
-                        className="bg-muted/40 cursor-not-allowed"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs flex items-center gap-1.5">
-                        API ID <Lock className="size-3 text-muted-foreground" />
-                      </Label>
-                      <Input
-                        value={apiId}
-                        disabled
-                        readOnly
-                        className="bg-muted/40 cursor-not-allowed"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs flex items-center gap-1.5">
-                        API Hash <Lock className="size-3 text-muted-foreground" />
-                      </Label>
-                      <Input
-                        type="password"
-                        value={apiHash}
-                        disabled
-                        readOnly
-                        className="bg-muted/40 cursor-not-allowed"
-                      />
-                    </div>
-                    <p className="text-xs leading-relaxed text-muted-foreground sm:col-span-2">
-                      As credenciais não podem ser alteradas. Para usar outras, remova o cliente e
-                      cadastre novamente.
-                    </p>
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    <Check className="size-4" /> Salvar alterações
-                  </Button>
-                </form>
+                <ClientEditForm
+                  key={editingId}
+                  clientId={editingId!}
+                  onSaved={(client) => setTitle(client.title)}
+                />
               ) : (
                 <>
                   {(step === "creds" || step === "mtCode") && (
@@ -1605,12 +1547,12 @@ function NewClientWizard() {
           </AnimatePresence>
         </section>
 
-        <aside className="sb-wizard-aside" aria-label="Ajuda com o cadastro">
-          {!isEditMode && (
+        {!isEditMode && (
+          <aside className="sb-wizard-aside" aria-label="Ajuda com o cadastro">
             <div className="sb-panel p-5 sm:p-6">
               <h2 className="mb-5 text-sm font-medium">Seu cadastro, passo a passo</h2>
               <ol className="sb-step-list" aria-label="Etapas do cadastro">
-                {steps.map(({ title: label, description, icon: Icon }, i) => (
+                {steps.map(({ title: label, description, icon }, i) => (
                   <li
                     key={label}
                     aria-current={i === stepIdx ? "step" : undefined}
@@ -1626,7 +1568,11 @@ function NewClientWizard() {
                             : "border-border text-muted-foreground",
                       )}
                     >
-                      {i < stepIdx ? <Check className="size-4" /> : <Icon className="size-4" />}
+                      {i < stepIdx ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <WorkspaceIcon variant={icon} className="size-5" />
+                      )}
                     </span>
                     <span className="pt-0.5">
                       <span
@@ -1647,130 +1593,41 @@ function NewClientWizard() {
                 ))}
               </ol>
             </div>
-          )}
 
-          {isEditMode && (
-            <div className="sb-panel p-5 sm:p-6">
-              <div className="mb-4 flex items-center gap-2 text-sm font-medium">
-                <UserRound className="size-4" />{" "}
-                {isEditMode ? "Conta conectada" : "Resumo da cliente"}
+            <div className="sb-cat-callout">
+              <BannerArtwork image="/art/cat-registration-help.svg" className="sb-callout-art" />
+              <div className="sb-callout-copy">
+                <h3 className="text-sm font-semibold">{tip.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed">{tip.text}</p>
               </div>
-              <p className="break-words text-lg font-medium">{title.trim() || "Nome da cliente"}</p>
-              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="size-3.5 shrink-0" />{" "}
-                {phone.trim()
-                  ? formatDisplayPhone(buildFullPhone())
-                  : "Telefone ainda não informado"}
-              </p>
-              <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                {isEditMode
-                  ? "As alterações se aplicam a esta cliente."
-                  : "A cliente aparece na sua lista depois que a conexão do Telegram for confirmada."}
-              </p>
             </div>
-          )}
-
-          <div className="relative overflow-hidden rounded-xl bg-[#d8edb1] p-5 pr-24 text-[#192114] sm:p-6 sm:pr-24">
-            <img
-              src="/art/cat-note.svg"
-              alt=""
-              className="pointer-events-none absolute -right-8 bottom-0 h-28 w-32 object-cover"
-            />
-            <h3 className="relative text-sm font-semibold">{tip.title}</h3>
-            <p className="relative mt-2 text-xs leading-relaxed text-[#34432a]">{tip.text}</p>
-          </div>
-        </aside>
+          </aside>
+        )}
       </div>
       <AccessNotification open={invalidNotice} title="Código inválido" />
-      <Dialog
+      <RegistrationFlowDialog
         open={flowModal !== null}
+        state={displayedModal}
+        busyStatus={busyStatus}
+        loading={loading}
+        clientTitle={title}
+        phone={confirmedPhone || buildFullPhone()}
         onOpenChange={(open) => {
           if (!open && !loading) setFlowModal(null);
         }}
-      >
-        <DialogContent
-          className="registration-modal site-control-glass w-[calc(100vw-2rem)] max-w-md rounded-xl border-foreground/20"
-          onOpenAutoFocus={(event) => event.preventDefault()}
-          onEscapeKeyDown={(event) => {
-            if (loading) event.preventDefault();
-          }}
-          onInteractOutside={(event) => event.preventDefault()}
-          aria-describedby="registration-dialog-description"
-        >
-          <DialogTitle className="sr-only">
-            {displayedModal === "failure"
-              ? "Falha ao coletar as credenciais"
-              : displayedModal === "sending"
-                ? (busyStatus ?? "Enviando código")
-                : "O número está correto?"}
-          </DialogTitle>
-          <DialogDescription id="registration-dialog-description" className="sr-only">
-            Confirmação do cadastro de cliente
-          </DialogDescription>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={displayedModal}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={fade}
-            >
-              {displayedModal === "sending" ? (
-                <RegistrationStatus text={busyStatus ?? "Enviando código"} />
-              ) : displayedModal === "failure" ? (
-                <div className="space-y-6">
-                  <h2 className="text-lg font-semibold">Falha ao coletar as credenciais</h2>
-                  <div className="flex justify-between gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStep(failureStep.current);
-                        setFlowModal(null);
-                      }}
-                    >
-                      Voltar
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        window.open("https://my.telegram.org", "_blank", "noopener,noreferrer");
-                        setCredsInfo(null);
-                        setStep("creds");
-                        setFlowModal(null);
-                      }}
-                    >
-                      Pegar manualmente
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="space-y-3 text-center">
-                    <h2 className="text-lg font-semibold">O número está correto?</h2>
-                    <p className="text-lg tabular-nums text-foreground">
-                      {(() => {
-                        const local = confirmedPhone.slice(ddi.length).replace(/\D/g, "");
-                        const areaLength =
-                          ddi === "+55" ? 2 : (findCountryByExactDial(ddi)?.mask[0] ?? 2);
-                        const area = local.slice(0, areaLength);
-                        const number = local.slice(areaLength);
-                        return `(${area}) ${number.length > 4 ? number.slice(0, -4) + "-" + number.slice(-4) : number}`;
-                      })()}
-                    </p>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <Button variant="outline" onClick={() => setFlowModal(null)}>
-                      Editar
-                    </Button>
-                    <Button disabled={loading} onClick={() => void tryAutomation(confirmedPhone)}>
-                      Continuar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
+        onEditPhone={() => setFlowModal(null)}
+        onConfirm={() => void tryAutomation(confirmedPhone)}
+        onBack={() => {
+          setStep(failureStep.current);
+          setFlowModal(null);
+        }}
+        onManual={() => {
+          window.open("https://my.telegram.org", "_blank", "noopener,noreferrer");
+          setCredsInfo(null);
+          setStep("creds");
+          setFlowModal(null);
+        }}
+      />
       <AlertDialog open={dupOpen} onOpenChange={setDupOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

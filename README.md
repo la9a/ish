@@ -4,6 +4,10 @@ Painel de atendimento de clientes e monitoramento de rascunhos em grupos do Tele
 
 ## Redesign
 
+A revisão atual está em [Atualizações V4](docs/ATUALIZACOES_V4.md): banners compactos nas duas orientações, controles escuros e reconexão entre dois servidores. [Pacote completo](releases/senhabaixa-compacto-v4.zip) · [Prompt para o Lovable](releases/PROMPT_LOVABLE_COMPACTO_V4.txt).
+
+A preparação dos atendimentos e os filtros de pendências estão descritos em [Atualizações V3](docs/ATUALIZACOES_V3.md).
+
 Interface preta e branca com banners de gatos por área. Monitoramento, conexões, cadastro, etapas de autorização, seleção múltipla e modais redesenhados; menus customizados por Radix e textos objetivos. Sem personalização de perfil e sem CAPTCHA Turnstile; autenticação e limites de tentativas continuam ativos.
 
 - [Baixar ZIP completo](releases/senhabaixa-redesign.zip)
