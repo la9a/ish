@@ -52,6 +52,8 @@ const bundledSubjects: Record<string, string> = {
   "/art/cat-multi-select.svg": "/art/cat-multi-select-natural.png",
 };
 const revisedSubjects: Record<string, string> = {
+  "/art/cat-connect.svg": "/art/cat-connect-editorial.png",
+  "/art/cat-multi-select.svg": "/art/cat-multi-editorial.png",
   "/art/cat-note.svg": "/art/cat-note-refined.png",
   "/art/cat-reconnect.svg": "/art/cat-reconnect-servers.png",
 };
@@ -64,11 +66,9 @@ function handleArtworkError(event: React.SyntheticEvent<HTMLImageElement>, fallb
 // File selection and framing are independent: torso scenes retain their bleed.
 const completeCharacters = new Set([
   "/art/cat-reconnect.svg",
-  "/art/cat-connect.svg",
   "/art/cat-code-sending.svg",
   "/art/cat-code-failure.svg",
   "/art/cat-multi.svg",
-  "/art/cat-multi-select.svg",
 ]);
 
 /** Backgrounds fill the card; characters extend slightly below its clipped lower edge. */

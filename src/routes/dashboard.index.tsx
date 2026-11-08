@@ -101,39 +101,38 @@ function DashboardHome() {
           <span className="sb-art-pill">VISÃO GERAL</span>
           <h1>
             Olá{name ? `, ${name}` : ""}.<br />
-            Aqui está o resumo das suas contas.
+            Suas clientes.
           </h1>
-          <p>
-            Organize as contas, confira os grupos e deixe as mensagens preparadas para o próximo
-            atendimento.
-          </p>
-        </div>
-        <div className="sb-hero-support">
-          <dl className="sb-banner-highlights">
-            <div>
-              <dt>Preparadas</dt>
-              <dd>{readyCount}</dd>
-            </div>
-            <div>
-              <dt>Com pendências</dt>
-              <dd>{pending.length}</dd>
-            </div>
-            <div>
-              <dt>Grupos ativos</dt>
-              <dd>{preparation.reduce((total, item) => total + item.activeGroups, 0)}</dd>
-            </div>
-          </dl>
-          <div className="sb-hero-actions mt-6 flex w-full max-w-[280px] flex-col gap-3">
-            <Link to="/dashboard/clientes" className="sb-button w-full justify-between">
+          <p>Grupos e rascunhos para o próximo atendimento.</p>
+          <div className="sb-hero-actions">
+            <Link to="/dashboard/clientes" className="sb-button">
               Gerenciar clientes <ArrowUpRight className="size-4" aria-hidden />
-            </Link>
-            <Link to="/dashboard/cadastro" className="sb-button w-full justify-between">
-              Adicionar cliente <Plus className="size-4" aria-hidden />
             </Link>
           </div>
         </div>
         <BannerArtwork image="/art/cat-hero.svg" className="sb-hero-art" priority />
       </section>
+      <div className="sb-hero-support">
+        <dl className="sb-banner-highlights">
+          <div>
+            <dt>Preparadas</dt>
+            <dd>{readyCount}</dd>
+          </div>
+          <div>
+            <dt>Com pendências</dt>
+            <dd>{pending.length}</dd>
+          </div>
+          <div>
+            <dt>Grupos ativos</dt>
+            <dd>{preparation.reduce((total, item) => total + item.activeGroups, 0)}</dd>
+          </div>
+        </dl>
+        <div className="sb-banner-actions">
+          <Link to="/dashboard/cadastro" className="sb-button-secondary">
+            Adicionar cliente <Plus className="size-4" aria-hidden />
+          </Link>
+        </div>
+      </div>
       <PreparationGuide />
       <section className="sb-stats" aria-label="Resumo da sua conta">
         {stats.map(({ label, value, icon, detail }) => (

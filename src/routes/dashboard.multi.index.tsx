@@ -640,7 +640,7 @@ export function MultiPage({ initialSelection }: { initialSelection?: string[] } 
     <main className="sb-page">
       <div className="mx-auto max-w-7xl">
         <PageBanner
-          image="/art/cat-multi.svg"
+          image="/art/cat-monitor.svg"
           compact
           eyebrow="ATENDIMENTO MÚLTIPLO"
           title="Monitoramento"

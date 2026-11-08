@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { BannerArtwork } from "@/components/BannerArtwork";
 
 type Props = {
@@ -25,30 +25,39 @@ export function PageBanner({
   highlights,
   hint,
 }: Props) {
+  const actions = Children.toArray(children);
+  const inlineAction = actions.length === 1;
+  const hasSupport = Boolean(highlights?.length || hint || actions.length > 1);
   return (
-    <section
-      className={`sb-page-banner sb-banner-frame sb-banner-${tone}${compact ? " sb-banner-compact" : ""}`}
-    >
-      <div className="sb-banner-copy">
-        {eyebrow && <p className="sb-banner-eyebrow">{eyebrow}</p>}
-        <h1>{title}</h1>
-        {description && <p className="sb-banner-description">{description}</p>}
-      </div>
-      <div className="sb-banner-support">
-        {highlights && highlights.length > 0 && (
-          <dl className="sb-banner-highlights">
-            {highlights.map(({ label, value }) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {children && <div className="sb-banner-actions">{children}</div>}
-        {hint && <p className="sb-banner-hint">{hint}</p>}
-      </div>
-      <BannerArtwork image={image} className="sb-banner-art" />
-    </section>
+    <>
+      <section
+        className={`sb-page-banner sb-banner-frame sb-banner-${tone}${compact ? " sb-banner-compact" : ""}`}
+        data-banner-scene={image.replace("/art/cat-", "").replace(".svg", "")}
+      >
+        <div className="sb-banner-copy">
+          {eyebrow && <p className="sb-banner-eyebrow">{eyebrow}</p>}
+          <h1>{title}</h1>
+          {description && <p className="sb-banner-description">{description}</p>}
+          {inlineAction && <div className="sb-banner-actions">{actions}</div>}
+        </div>
+        <BannerArtwork image={image} className="sb-banner-art" />
+      </section>
+      {hasSupport && (
+        <div className="sb-banner-support" aria-label={`Resumo de ${title}`}>
+          {highlights && highlights.length > 0 && (
+            <dl className="sb-banner-highlights">
+              {highlights.map(({ label, value }) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {actions.length > 1 && <div className="sb-banner-actions">{actions}</div>}
+          {hint && <p className="sb-banner-hint">{hint}</p>}
+        </div>
+      )}
+    </>
   );
 }

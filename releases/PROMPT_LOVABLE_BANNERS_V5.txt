@@ -1,0 +1,65 @@
+SENHA BAIXA — APLICAR BANNERS V5
+
+Use esta revisão em lugar das regras de enquadramento da V4.
+Código: https://github.com/la9a/ish
+Pacote completo: https://github.com/la9a/ish/blob/main/releases/senhabaixa-banners-v5.zip
+
+OBJETIVO VISUAL
+
+Os gatos devem parecer parte da moldura, com o corpo continuando para fora da parte de baixo. A linha reta do corte do torso precisa ficar escondida abaixo da borda inferior do card. Não deixe os personagens flutuando no meio, dentro de uma caixa pequena ou acima de uma faixa de conteúdo.
+
+Use como referência a proporção horizontal dos banners originais: visão geral com gato de óculos à direita e monitoramento com gato de fones encostando no rodapé. Preserve a leitura do título, descrição e ação principal na esquerda.
+
+ENQUADRAMENTO E TAMANHO
+
+Integre juntos src/components/PageBanner.tsx, src/components/BannerArtwork.tsx, src/styles.css e a organização atual da visão geral em src/routes/dashboard.index.tsx. Uma alteração isolada no CSS da V4 não basta, porque os resumos adicionais antes ocupavam uma linha dentro da própria moldura.
+
+PageBanner agora separa o banner e a faixa escura de apoio em elementos irmãos. O banner contém título, descrição e, quando há uma única ação, o botão. Resumos, observações e conjuntos de ações ficam abaixo, fora da moldura ilustrada. Não elimine essas funcionalidades.
+
+As artes são posicionadas em relação à moldura inteira. O elemento da arte precisa alcançar o rodapé do card, não o fim de uma linha interna de grid. Use object-position: center bottom e mantenha o corte inferior abaixo do overflow:hidden do card. A V5 usa sangria inferior de 14px; o trio possui uma compensação adicional de 8% para ocultar também a margem transparente do arquivo.
+
+Não transforme a imagem em position:static com uma altura pequena, object-position:center ou centralização vertical. Essas regras anteriores criavam a impressão de gatos flutuando e deixavam a linha do corte à vista. Não estique nem distorça as proporções das imagens.
+
+A proporção de referência é aproximadamente 2,48:1 para os banners de seção e 1,71:1 para a visão geral. A implementação entregue usa unidades do contêiner e limites de altura: banners de 154 a 300px e visão geral de 210 a 360px, conforme o espaço disponível. Em um celular de 390px, os banners ficam em torno de 154px e a visão geral em 210px. Preserve as quebras de linha legíveis e o conteúdo inteiro; não aplique uma altura fixa de 360px a todos os cards.
+
+O mesmo enquadramento inferior foi aplicado aos cabeçalhos dos modais e à ajuda do cadastro. A arte de falha sem gato continua inteira, sem a regra de corte de torso.
+
+ARTES NOVAS E ESTILO
+
+Use os arquivos locais incluídos no pacote:
+- public/art/cat-multi-editorial.png para o trio da SELEÇÃO de atendimento multi.
+- public/art/cat-connect-editorial.png para a aba Conexões.
+
+São ilustrações planas com textura leve de papel, olhos amendoados, bigodes finos, marcas de pelagem e cartões/objetos discretos. O trio tem corpos com proporções naturais e barriga detalhada; evite corpos cilíndricos longos, aparência plástica, brilho, volume 3D, base oval, pedestal ou sombra de chão.
+
+BannerArtwork deve priorizar esses arquivos em revisedSubjects antes dos mapeamentos antigos .asset.json do Lovable e dos PNGs antigos. Não restaure cat-multi-select-natural.png ou cat-connect-complete-cables.png nessas duas telas.
+
+Na tela de MONITORAMENTO múltiplo, use /art/cat-monitor.svg: o gato lilás de fones aprovado na referência. O trio fica na seleção das contas. Não redesenhe os demais gatos aprovados e mantenha a reconexão entre dois servidores da V4.
+
+PRESERVAR FUNCIONALIDADES
+
+Mantenha controles e dropdowns escuros, filtros de preparação, detalhes das clientes, fixação, busca, cadastro, recuperação e seleção de até 20 contas.
+
+Não altere autenticação, limites, isolamento dos dados, sessões, segredos, banco ou motor da VPS. Preserve os locks de envio, detecção de abertura, confirmação da mensagem e cálculo da senha. Não execute envios reais para validar aparência.
+
+Reutilize a configuração existente e a SESSION_ENCRYPTION_KEY atual. Não copie fixtures dos testes para produção, não exponha segredos via VITE_ e não aplique migrações por causa desta revisão visual.
+
+VALIDAÇÃO
+
+Use Node 24 e Bun 1.3.13 e preserve bun.lock:
+bun install --frozen-lockfile
+bun run typecheck
+bun run test
+bun run build
+
+Siga docs/VALIDATION.md e docs/ATUALIZACOES_V5.md para os testes com Playwright/Chromium. A suíte de banners verifica separação de texto e arte, enquadramento na borda inferior e clipping; para as duas artes novas também verifica a margem transparente real da imagem, não só o retângulo do elemento.
+
+Confira 360px, 390px, 768px, 1024px e 1440px e a rotação para paisagem:
+- Torso passa da borda inferior e a linha reta do corte fica invisível.
+- Orelhas e rostos permanecem visíveis; títulos e botões não ficam atrás da arte.
+- Trio e gato de Conexões seguem o traço da coleção, sem aparência 3D.
+- Banners são horizontais, com altura próxima das referências.
+- Indicadores e ações adicionais continuam disponíveis abaixo da moldura.
+- Login, cadastro, grupos, rascunhos e monitoramento continuam funcionando.
+
+Ao concluir, informe exatamente as mudanças e verificações executadas. Capturas com dados fictícios não comprovam o funcionamento da integração de produção.

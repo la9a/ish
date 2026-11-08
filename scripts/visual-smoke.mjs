@@ -241,6 +241,44 @@ async function assertBannerSeparation(name) {
       );
       const art = frame.querySelector(".sb-art-subject");
       if (!art || !frame.getBoundingClientRect().height) continue;
+      const artBounds = art.getBoundingClientRect();
+      const frameBounds = frame.getBoundingClientRect();
+      if (
+        art.closest("[data-artwork]")?.getAttribute("data-artwork") !== "code-failure" &&
+        artBounds.height &&
+        artBounds.bottom < frameBounds.bottom + 8
+      ) {
+        issues.push(
+          `Torso crop floats above frame edge: ${art.closest("[data-artwork]")?.getAttribute("data-artwork")}`,
+        );
+        if (/cat-(multi|connect)-editorial\.png$/.test(art.getAttribute("src") || "")) {
+          const canvas = document.createElement("canvas");
+          canvas.width = 80;
+          canvas.height = Math.round((80 * art.naturalHeight) / art.naturalWidth);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(art, 0, 0, canvas.width, canvas.height);
+          const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          let lastSolidRow = -1;
+          for (let y = canvas.height - 1; y >= 0 && lastSolidRow < 0; y--) {
+            for (let x = 0; x < canvas.width; x++) {
+              if (pixels[(y * canvas.width + x) * 4 + 3] > 128) {
+                lastSolidRow = y;
+                break;
+              }
+            }
+          }
+          const scale = Math.min(
+            artBounds.width / art.naturalWidth,
+            artBounds.height / art.naturalHeight,
+          );
+          const transparentFooter =
+            ((canvas.height - lastSolidRow - 1) / canvas.height) * art.naturalHeight * scale;
+          if (artBounds.bottom - transparentFooter < frameBounds.bottom + 1)
+            issues.push(
+              "Visible torso crop must extend below the card, including transparent image margins",
+            );
+        }
+      }
       for (const copy of copies) {
         const a = copy.getBoundingClientRect(),
           b = art.getBoundingClientRect(),
@@ -268,6 +306,7 @@ async function assertBannerSeparation(name) {
 async function checkCompactControls() {
   const rowHeights = [];
   for (const size of [
+    { width: 1440, height: 1000 },
     { width: 390, height: 844 },
     { width: 844, height: 390 },
     { width: 360, height: 800 },
@@ -276,6 +315,7 @@ async function checkCompactControls() {
     for (const [route, heading] of [
       ["/dashboard/clientes", "Minhas clientes"],
       ["/dashboard/multi", "Atendimento multi"],
+      ["/admin/connection", "Conexões"],
       ["/dashboard/cadastro?id=visual-lola", "Reconectar Telegram"],
     ]) {
       await page.goto(base + route);
@@ -291,7 +331,10 @@ async function checkCompactControls() {
       });
       assert.equal(layout.sideBySide, true, `${heading}: horizontal art in either orientation`);
       if (size.width < 640)
-        assert.ok(layout.height < 400, `${heading}: compact portrait banner (${layout.height}px)`);
+        assert.ok(
+          layout.height <= 210,
+          `${heading}: reference-sized portrait banner (${layout.height}px)`,
+        );
       // Reproduce a light host reset: controls must explicitly retain the dark theme.
       await page.addStyleTag({ content: "button { background: #fff; color: #111; }" });
       const paleControls = await page.evaluate(() => {
@@ -441,13 +484,18 @@ async function checkRefinements() {
     const hero = page.locator(".sb-hero");
     assert.equal(await hero.evaluate((el) => getComputedStyle(el, "::before").content), "none");
     const links = await hero.getByRole("link").all();
-    assert.equal(links.length, 2);
-    const [manage, add] = await Promise.all(links.map((el) => el.boundingBox()));
+    assert.equal(links.length, 1);
+    assert.equal(await links[0].getAttribute("href"), "/dashboard/clientes");
+    const add = page
+      .locator(".sb-hero-support")
+      .getByRole("link", { name: "Adicionar cliente", exact: true });
+    assert.equal(await add.getAttribute("href"), "/dashboard/cadastro");
     assert.ok(
-      Math.abs(manage.width - add.width) < 1 &&
-        Math.abs(manage.height - add.height) < 1 &&
-        add.y > manage.y,
+      (await add.boundingBox()).y >=
+        (await hero.boundingBox()).y + (await hero.boundingBox()).height,
     );
+    if (size.width < 640)
+      assert.ok((await hero.boundingBox()).height <= 230, "Reference-sized portrait overview");
     assert.equal(await page.locator("footer").count(), 0);
     await photo("home-" + size.width);
   }
@@ -685,7 +733,7 @@ async function checkWorkspaceSplit() {
   await page.getByRole("checkbox", { name: "Selecionar Luiz" }).check();
   await page.getByRole("button", { name: /Abrir monitoramento/ }).click();
   await page.getByRole("heading", { name: "Monitoramento", exact: true }).waitFor();
-  assert.equal(await page.locator(".sb-banner-art").getAttribute("data-artwork"), "multi");
+  assert.equal(await page.locator(".sb-banner-art").getAttribute("data-artwork"), "monitor");
   await photo("atendimento-multi-monitoramento-desktop");
   await page.goto(`${base}/admin/connection`);
   await page.getByRole("heading", { name: "Conexões", exact: true }).waitFor();

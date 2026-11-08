@@ -4,7 +4,7 @@ Painel de atendimento de clientes e monitoramento de rascunhos em grupos do Tele
 
 ## Redesign
 
-A revisão atual está em [Atualizações V4](docs/ATUALIZACOES_V4.md): banners compactos nas duas orientações, controles escuros e reconexão entre dois servidores. [Pacote completo](releases/senhabaixa-compacto-v4.zip) · [Prompt para o Lovable](releases/PROMPT_LOVABLE_COMPACTO_V4.txt).
+A revisão atual está em [Atualizações V5](docs/ATUALIZACOES_V5.md): proporções das referências, cortes de torso ocultos na borda inferior e novas artes planas para o trio e Conexões. [Pacote completo](releases/senhabaixa-banners-v5.zip) · [Prompt para o Lovable](releases/PROMPT_LOVABLE_BANNERS_V5.txt).
 
 A preparação dos atendimentos e os filtros de pendências estão descritos em [Atualizações V3](docs/ATUALIZACOES_V3.md).
 
