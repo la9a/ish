@@ -1,5 +1,7 @@
 # Auditoria do caminho de envio — preparação local
 
+> Atualização: o pacote posteriormente enviado com a versão da VPS foi revisado em [MIAMI_VPS_PACOTE_REVIEW.md](MIAMI_VPS_PACOTE_REVIEW.md). Ele revelou diferenças, quatro falhas adicionais e uma mudança de polling. A referência foi corrigida neste ramo; não houve implantação. O restante deste documento registra a preparação inicial.
+
 ## Estado da análise
 
 Não houve login nem alteração na VPS. O SSH ao IP informado, na porta 22, retornou `Connection refused` tanto no isolamento padrão quanto no executor externo. O canal TCP gerenciado também recusou conexão; a tentativa HTTP de leitura foi bloqueada com `403 Domain forbidden`. Esses resultados não identificam a causa no servidor e não testam a senha. Não há capturas de diagnóstico de rede retidas no ambiente.

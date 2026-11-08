@@ -1,0 +1,58 @@
+Revise e corrija o candidato Miami preparado na VPS antes de implantá-lo.
+
+CONTEXTO E EVIDÊNCIA
+
+O operador usa o Lovable para administrar a VPS e não tem terminal local. Use o acesso já existente; não peça novamente a senha nem inclua credenciais, tokens, API Hash, sessões, telefones ou conteúdo de mensagens nas entregas.
+
+O ZIP anterior miami-confirmacao-vps-preparada.zip foi verificado isoladamente. Os 15 testes do agente e 5 do coletor passam, o patch é reversível e os hashes conferem. Mesmo assim, quatro testes de aceitação adicionais falham. Não implante automaticamente o candidato anterior.
+
+Original encontrado, SHA-256:
+6a7d841c5d5e50cad1a8f03e8bdaa2bdf685e5fbe21df3bddac394a1449ebd12
+Candidato anterior, SHA-256:
+6990ee51348b4a0ff8cdb4b8a53df0fc8c03e6bc3e144d9533a4dc2a6c706d22
+
+O pacote miami-confirmacao-review-v2.zip e o ramo codex/miami-confirmacao do GitHub la9a/ish contêm código DE REFERÊNCIA atualizado, testes e docs/MIAMI_VPS_PACOTE_REVIEW.md. O server.mjs dessa referência não é a versão personalizada da VPS. Não substitua o arquivo inteiro nem aplique seu server.patch na VPS: esse patch tem como base o repositório, não o original acima. Compare o hash atual antes de editar e adapte apenas os trechos necessários em uma cópia candidata fora do caminho ativo.
+
+CORRIGIR NO CANDIDATO DA VPS
+
+1. Remover o uso de probe/startLane para testar escrita. Atualmente PROBE_MS=20 agenda envios e o callback de abertura dispara com qualquer raw update da conta. Disparar somente quando um sinal do grupo alvo provar abertura: permissões de escrita liberadas ou mensagem nova de membro comum, acima do baseline, excluindo admins, a própria conta e replay. Um updateUserStatus ou mensagem de outro grupo não pode enviar nada. Reutilize a lógica de abertura e readWriteState/reconcileOnce da referência, adaptando os helpers e checando cancelamento após cada await. A recuperação periódica deve ler permissões; não testar envio contra grupo fechado. Não aumentar rajadas, ignorar FLOOD_WAIT ou usar as ondas de hedgedSend; remover código morto e comentários incompatíveis.
+
+2. Usar uma única instância/conexão de TelegramClient por conta restaurada. A versão da VPS cria main e alt e importa a mesma autorização nas duas; isso contradiz a regra do projeto sobre AUTH_KEY_DUPLICATED. Não copiar sessões, criar um segundo agente ou executar reload paralelo. Preservar os arquivos de dados existentes e não apagar alt.session; remover seu uso na nova execução. Leitura de reconciliação deve usar o cliente existente e respeitar os limites do Telegram. Não reativar USE_ALT para contornar latência de ACK.
+
+3. Aplicar matchesPeer() ou equivalente tipado nos gatilhos e na confirmação: peerChat 123 não é peerChannel 123. O candidato anterior só separava tipos na confirmação. Testar a mensagem de admin no tipo errado e o aviso de permissões no tipo errado; nenhum deles pode provocar envio.
+
+4. Descartar respostas e erros de RPC quando this.sent ou this.stopped já estiver definido, imediatamente depois do await e no início do catch. Depois de sucesso pela própria mensagem, RPC_CALL_FAIL tardio não pode publicar erro; FLOOD_WAIT tardio após cancelamento não pode rearmar trabalho nem mudar o estado final. Manter confirmação antes do ACK, ID concreto, validação de saída/peer/texto/baseline/prazo, trava antes do primeiro await e duplicidade incerta até reconciliação.
+
+5. Após prewarm(), loadAdmins() e demais preparações assíncronas, verificar cancelamento antes de registrar handlers, timers ou iniciar reconciliação. Liberar referências de openChat adquiridas durante cancelamento, sem fechar o chat de outro job que ainda o usa. stop() deve limpar timers independentemente de jobPing. A referência atualizada já contém os guardas descritos; adaptar preservando as particularidades da VPS.
+
+6. O patch anterior alterou o fallback administrativo real de 300 ms para 1.000 ms. Preservar os 300 ms da versão encontrada nessa adaptação, com cursor separado do baseline, checagem após await e proteção contra leituras concorrentes. Isso não é motivo para reduzir abaixo de 300 ms, criar consultas extras ou usar envio de prova. O raw update continua sendo o caminho prioritário. Documentar qualquer outra alteração de cadência antes de considerá-la para implantação.
+
+7. Preservar dependências, lockfile, DEVICE, endpoints, sessões, AGENT_TOKEN, DATA_DIR, configuração e apuração da senha. Não mudar a senha calculada por minuto/exclusão de admins nesta correção; registrar essa auditoria como pendente. Na telemetria, chamar o intervalo RPC de confirmação observada, não de chegada ao Telegram. Não prometer posição nem tempos que não foram medidos. Não copiar telemetria incompleta das sondas como prova de ganho.
+
+VALIDAÇÃO OFFLINE
+
+Não iniciar HTTP, restaurar contas ou importar server.mjs para testar. Usar o fixture que executa a classe Job e os helpers reais com transporte simulado. Inspecionar e adaptar o fixture ao candidato final; não substituir a implementação por um modelo que apenas imite o esperado.
+
+A referência atual tem 20 testes do agente: opening-update.test.mjs, admin-update.test.mjs e job-lifecycle.test.mjs. O coletor tem 5 testes. Repetir no Node 20.20.2 da VPS, em cópia isolada, sem Telegram. Os sete testes de job-lifecycle devem passar, além dos testes de confirmação, peer/texto/ID/prazo, duplicidade, concorrência, polling e FLOOD_WAIT. Acrescentar validação de que só existe um cliente restaurado por conta e nenhuma sonda de envio é iniciada.
+
+Para reproduzir os quatro achados na extração do pacote antigo, executar o teste da referência, apontando MIAMI_REVIEW_ROOT para a raiz da extração inspecionada:
+
+MIAMI_REVIEW_ROOT=/caminho/da/extracao node --test --test-name-pattern='opening ignores|an admin message|an RPC error|cancellation while loading' miami-agent/src/job-lifecycle.test.mjs
+
+Esses quatro testes falham no candidato antigo; após a adaptação, testar o comportamento desejado e exigir aprovação, sem mudar asserts para aceitar o defeito. Os testes antigos específicos de probe devem ser substituídos por testes que verifiquem a ausência de sondas e a reconciliação de leitura; não manter uma função de envio repetido somente para passar o teste antigo.
+
+CONFERIR O JOB SEM INTERROMPER O SERVIÇO
+
+O relatório diz que há um job listado, com último evento patch de aproximadamente 9,9 dias. /health lista jobs encerrados porque o Map os retém. Em finish(), stop() ocorre antes de done e do patch posterior; a retenção de /events pode ter removido o done. Não considerar jobs.length uma prova de atividade, nem idade/ausência de done prova de inatividade.
+
+Usar as leituras já disponíveis e o journal completo relevante para localizar o último início daquele job e seu término posterior, verificando que o ID não foi reutilizado. Verificar também todos os demais jobs e o estado de monitoramento do painel. Sanitizar os resultados. Não cancelar/remover jobs para liberar a troca, ativar inspector/debugger, ler memória por injeção de código, abrir portas ou reiniciar para obter diagnóstico. Se a sequência completa não estiver disponível ou houver dúvida, manter estado desconhecido, deixar o candidato preparado e não reiniciar. Documentar o que falta; não transferir ao operador uma tarefa de terminal que ele já informou não poder executar.
+
+IMPLANTAÇÃO SOMENTE QUANDO OS CRITÉRIOS FOREM COMPROVADOS
+
+Comparar novamente hash ativo, PID, systemd miami.service e estado de todos os monitoramentos imediatamente antes da troca; evitar novos jobs durante a janela pelo fluxo normal da aplicação. Exigir testes aprovados e janela comprovadamente sem monitoramento. Preservar o backup original /root/miami-agent/backups/confirmacao-20261108T1945Z e criar outro diretório com timestamp para a nova versão, hashes e rollback. Não reutilizar backup sobrescrevendo o original.
+
+Trocar somente o código necessário, com escrita atômica no mesmo filesystem e permissões corretas. Reiniciar a unidade existente uma única vez, sem iniciar cópia paralela do agente. Se acesso SSH falhar ou o estado ficar desconhecido, não improvisar outra implantação. Verificar /ping e /health autenticado pela rota já autorizada, sem expor token. Se a inicialização falhar, restaurar o código anterior e a unidade existente; não modificar dados nem fazer reinícios repetidos sem diagnóstico.
+
+ENTREGA
+
+Devolver o candidato final adaptado, patch contra o hash real, manifesto, testes, parecer e diagnóstico sanitizado em ZIP. Informar separadamente: encontrado/preparado/implantado; justificativa da janela; hashes; Node/mtcute; testes; PID antes/depois; bloqueios. Não declarar acesso, backup, implantação, saúde ou ganho sem evidência. Nenhuma mensagem real deve ser enviada só para validar esta etapa. A comparação de latência e posição deve usar observações de atendimentos normais e autorizados, sem interferir em grupos de terceiros.

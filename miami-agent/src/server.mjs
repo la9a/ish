@@ -633,6 +633,16 @@ function peerKey(peer) {
   return `${peer._ ?? "peer"}:${String(id)}`;
 }
 
+function matchesPeer(actual, expected) {
+  if (expected?._ === "inputPeerChannel") {
+    return actual?._ === "peerChannel" && Number(actual.channelId) === Number(expected.channelId);
+  }
+  if (expected?._ === "inputPeerChat") {
+    return actual?._ === "peerChat" && Number(actual.chatId) === Number(expected.chatId);
+  }
+  return false;
+}
+
 /** Apuração da senha: uma leitura por grupo, posições comparáveis entre contas. */
 const positionGroups = new Map();
 let positionBatchSequence = 0;
@@ -924,10 +934,15 @@ class Job {
     try {
       await this.prewarm();
     } catch (e) {
+      if (this.stopped) return;
       const msg = String(e?.message ?? e);
       if (PEER_RE.test(msg) || /group_not_found/i.test(msg)) return this.failPeer();
       throw e;
     }
+
+    // A preparação pode terminar depois do cancelamento; libera também um
+    // openPeer adquirido enquanto a chamada assíncrona estava em andamento.
+    if (this.stopped) { this.stop(); return; }
 
     if (this.cfg.targetMs) {
       // Prazo monotônico: não pula se o relógio do sistema for ajustado.
@@ -951,8 +966,9 @@ class Job {
     // mostre a escrita liberada; sem envio de teste com o grupo fechado.
     const peer = this.payload.peer;
     const chatId = Number(peer?.channelId ?? peer?.chatId ?? 0);
-    const samePeer = (p) => Number(p?.channelId ?? p?.chatId ?? 0) === chatId;
+    const samePeer = (p) => matchesPeer(p, peer);
     this.admins = await this.loadAdmins();
+    if (this.stopped) return;
     this.startedAt = Date.now();
     const selfId = Number(this.acc.selfId ?? 0);
     this.rawHandler = (info) => {
@@ -963,7 +979,7 @@ class Job {
       const recebido = performance.now();
       let open = null;
       let unknown = false;
-      if (upd?._ === "updateChannel" && Number(upd.channelId) === chatId) {
+      if (peer?._ === "inputPeerChannel" && upd?._ === "updateChannel" && Number(upd.channelId) === chatId) {
         const st = channelWriteState(info?.peers?.chats?.get?.(chatId));
         if (st === "open") open = "permissoes";
         else if (st === "unknown") unknown = true;
@@ -1032,9 +1048,7 @@ class Job {
     }
     if (elapsed >= 10_000) return false;
     const peer = this.payload.peer;
-    const samePeer = (p) => peer.channelId != null
-      ? Number(p?.channelId) === Number(peer.channelId)
-      : peer.chatId != null && Number(p?.chatId) === Number(peer.chatId);
+    const samePeer = (p) => matchesPeer(p, peer);
     let id = null;
     forEachObject(raw, (upd) => {
       if (id !== null || (upd?._ !== "updateNewChannelMessage" && upd?._ !== "updateNewMessage")) return;
@@ -1071,7 +1085,7 @@ class Job {
         }
       }
     } catch (e) {
-      log(this.id, "error", `Falha ao carregar admins: ${String(e?.message ?? e).slice(0, 120)}`);
+      if (!this.stopped) log(this.id, "error", `Falha ao carregar admins: ${String(e?.message ?? e).slice(0, 120)}`);
     }
     return ids;
   }
@@ -1081,6 +1095,7 @@ class Job {
     const chatId = Number(peer?.channelId ?? peer?.chatId ?? 0);
     // "Grupo aberto": só dispara com mensagem de admin, dono ou admin anônimo.
     this.admins = await this.loadAdmins();
+    if (this.stopped) return;
     let pollCursor = this.baselineId ?? 0;
     this.adminRefresh = setInterval(() => { this.loadAdmins().then((a) => { if (a.size) this.admins = a; }).catch(() => {}); }, 30_000);
     const selfId = Number(this.acc.selfId ?? 0);
@@ -1105,8 +1120,7 @@ class Job {
         if (item?._ !== "updateNewChannelMessage" && item?._ !== "updateNewMessage") return;
         const m = item.message;
         if (!isFreshMessage(m)) return;
-        const pid = Number(m.peerId?.channelId ?? m.peerId?.chatId ?? 0);
-        if (!pid || pid !== chatId) return;
+        if (!matchesPeer(m.peerId, peer)) return;
         if (!isAdminMsg(m)) return;
         trigger = true;
       });
@@ -1182,11 +1196,13 @@ class Job {
     this.tl = { ...(this.tl ?? {}), motivo: reason, escrita: p0 };
     try {
       const res = await fastSend(this.acc.main, this.payload, { noUpdates: SEND_NO_UPDATES });
+      if (this.sent || this.stopped) return;
       this.tl.retorno = performance.now();
       this.tl.envioMs = Math.round(this.tl.retorno - p0);
       if (res?.__duplicate) return this.reconcileDuplicate(t0);
       this.finish(Date.now() - t0, extractMessageId(res, this.payload.randomId));
     } catch (e) {
+      if (this.sent || this.stopped) return;
       const msg = String(e?.message ?? e);
       const flood = FLOOD_RE.exec(msg);
       if (flood) {
@@ -1240,6 +1256,7 @@ class Job {
     this.reconcileBusy = true;
     try {
       const st = await this.readWriteState();
+      if (this.sent || this.stopped) return;
       if (st !== "unknown") this.writeState = st;
       if (st === "open") {
         this.tl = { sinal: "reconciliacao", recebido: performance.now() };
@@ -1320,10 +1337,8 @@ class Job {
     this.laneTimers.clear();
     clearInterval(this.reconcileTimer); clearTimeout(this.ttlTimer); clearTimeout(this.dupTimer);
     this.reconcileTimer = null;
-    if (this.jobPing) {
-      clearInterval(this.jobPing); clearInterval(this.msgPoll); clearInterval(this.adminRefresh);
-      this.jobPing = null;
-    }
+    clearInterval(this.jobPing); clearInterval(this.msgPoll); clearInterval(this.adminRefresh);
+    this.jobPing = null;
     if (this.rawHandler) {
       try {
         this.acc.main.onRawUpdate.remove(this.rawHandler);
