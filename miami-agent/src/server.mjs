@@ -345,8 +345,8 @@ async function fastSend(client, payload, opts = {}) {
     );
 
   } catch (e) {
-    // "envio repetido" = outra onda já foi aceita. Trata como sucesso na hora,
-    // sem esperar retry de 1 segundo.
+    // O erro sozinho não confirma o envio. O job só finaliza depois de
+    // reconciliar o random_id com um id concreto de mensagem.
     if (DUP_RE.test(String(e?.message ?? e))) return { __duplicate: true };
     throw e;
   }
@@ -958,29 +958,7 @@ class Job {
     this.rawHandler = (info) => {
       if (this.sent || this.stopped) return;
       const upd = info?.update ?? info;
-      const id = this.acc.sentMessageId(this.payload?.randomId);
-      if (id) {
-        const t0 = this.lastSendAt || Date.now();
-        return this.finish(Math.max(0, Date.now() - t0), id);
-      }
-      // Nossa própria mensagem apareceu no grupo: confirma na hora, sem
-      // esperar o ACK (que em grupos grandes demora ~0,6s a mais no servidor
-      // do Telegram). A posição na fila já está garantida nesse momento.
-      const own = upd?.message;
-      if (
-        (upd?._ === "updateNewChannelMessage" || upd?._ === "updateNewMessage") &&
-        own?._ === "message" &&
-        own.out &&
-        samePeer(own.peerId) &&
-        this.lastSendAt &&
-        Date.now() - this.lastSendAt < 10_000 &&
-        String(own.message ?? "") === this.cfg?.message
-      ) {
-        const ownId = numericMessageId(own.id) ?? 0;
-        if (ownId > (this.baselineId ?? 0)) {
-          return this.finish(Math.max(0, Date.now() - this.lastSendAt), ownId);
-        }
-      }
+      if (this.confirmSentUpdate(info)) return;
       if (this.firing || this.reconciling) return;
       const recebido = performance.now();
       let open = null;
@@ -1041,6 +1019,37 @@ class Job {
     return set;
   }
 
+  /** Both trigger modes confirm the account's actual message before waiting
+   *  for the RPC to settle. A duplicate error alone is never confirmation. */
+  confirmSentUpdate(raw) {
+    if (this.sent || this.stopped || !this.lastSendAt || !this.payload?.peer) return false;
+    const elapsed = Math.max(0, Date.now() - this.lastSendAt);
+    const correlated = this.acc.sentMessageId(this.payload.randomId);
+    if (correlated) {
+      this.tl = { ...(this.tl ?? {}), confirmacaoVia: "random-id" };
+      this.finish(elapsed, correlated);
+      return true;
+    }
+    if (elapsed >= 10_000) return false;
+    const peer = this.payload.peer;
+    const samePeer = (p) => peer.channelId != null
+      ? Number(p?.channelId) === Number(peer.channelId)
+      : peer.chatId != null && Number(p?.chatId) === Number(peer.chatId);
+    let id = null;
+    forEachObject(raw, (upd) => {
+      if (id !== null || (upd?._ !== "updateNewChannelMessage" && upd?._ !== "updateNewMessage")) return;
+      const message = upd.message;
+      if (message?._ !== "message" || !message.out || !samePeer(message.peerId)) return;
+      if (String(message.message ?? "") !== this.cfg.message) return;
+      const candidate = numericMessageId(message.id);
+      if (candidate !== null && candidate > (this.baselineId ?? 0)) id = candidate;
+    });
+    if (id === null) return false;
+    this.tl = { ...(this.tl ?? {}), confirmacaoVia: "propria-mensagem" };
+    this.finish(elapsed, id);
+    return true;
+  }
+
   async loadAdmins() {
     const peer = this.payload.peer;
     const ids = new Set();
@@ -1072,6 +1081,7 @@ class Job {
     const chatId = Number(peer?.channelId ?? peer?.chatId ?? 0);
     // "Grupo aberto": só dispara com mensagem de admin, dono ou admin anônimo.
     this.admins = await this.loadAdmins();
+    let pollCursor = this.baselineId ?? 0;
     this.adminRefresh = setInterval(() => { this.loadAdmins().then((a) => { if (a.size) this.admins = a; }).catch(() => {}); }, 30_000);
     const selfId = Number(this.acc.selfId ?? 0);
     const isAdminMsg = (m) => {
@@ -1081,49 +1091,52 @@ class Job {
       if (f._ === "peerUser") return this.admins.has(Number(f.userId));
       return false;
     };
+    const isFreshMessage = (m) => m?._ === "message" && !m.out
+      && (numericMessageId(m.id) ?? 0) > (this.baselineId ?? 0);
     console.log("[mensagem-admins]", this.id, { total: this.admins.size, selfAdmin: this.admins.has(selfId) });
     this.rawHandler = (raw) => {
-      if (this.sent || this.stopped || this.firing) return;
+      if (this.sent || this.stopped) return;
+      if (this.confirmSentUpdate(raw)) return;
+      if (this.firing || this.reconciling) return;
+      const recebido = performance.now();
       let trigger = false;
       forEachObject(raw, (item) => {
         if (trigger) return;
         if (item?._ !== "updateNewChannelMessage" && item?._ !== "updateNewMessage") return;
         const m = item.message;
-        if (m?._ !== "message") return;
+        if (!isFreshMessage(m)) return;
         const pid = Number(m.peerId?.channelId ?? m.peerId?.chatId ?? 0);
-        console.log("[mensagem-gatilho]", this.id, {
-          update: item._,
-          peer: pid,
-          esperado: chatId,
-          out: Boolean(m.out),
-          remetente: m.fromId?._ ?? "ausente",
-        });
         if (!pid || pid !== chatId) return;
         if (!isAdminMsg(m)) return;
         trigger = true;
       });
       if (trigger) {
+        this.tl = { sinal: "mensagem-admin", recebido };
         this.openAt = Date.now();
-        void this.fire();
+        void this.fire("mensagem-admin");
       }
     };
     this.acc.main.onRawUpdate.add(this.rawHandler);
     this.startJobPing();
     console.log("[mensagem-armado]", this.id, { chatId, baseline: this.baselineId });
-    // Rede de segurança: lê a última mensagem do grupo a cada 300 ms. Se
-    // apareceu uma nova (que não seja nossa), dispara mesmo sem o aviso.
+    // Rede de segurança de leitura a cada 1s. O aviso continua sendo o caminho
+    // imediato; o cursor do polling não pode alterar a âncora da confirmação.
     const reader = this.acc.alt ?? this.acc.main;
     this.msgPoll = setInterval(async () => {
-      if (this.sent || this.stopped || this.firing || this.msgPollBusy) return;
+      if (this.sent || this.stopped || this.firing || this.reconciling || this.msgPollBusy) return;
       this.msgPollBusy = true;
       try {
         const r = await readCall(reader, { _: "messages.getHistory", peer: this.payload.peer, offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: Long.ZERO });
+        if (this.sent || this.stopped || this.firing || this.reconciling) return;
         const m = r?.messages?.[0];
         const id = numericMessageId(m?.id) ?? 0;
-        if (id > (this.baselineId ?? 0) && isAdminMsg(m)) {
-          console.log("[mensagem-gatilho-poll]", this.id, { id, baseline: this.baselineId });
-          if (!this.sent && !this.firing) { this.openAt = Date.now(); void this.fire(); }
-        } else if (id > (this.baselineId ?? 0)) this.baselineId = id; // membro comum: ignora
+        if (id <= pollCursor || !isFreshMessage(m)) return;
+        pollCursor = id;
+        if (isAdminMsg(m)) {
+          this.tl = { sinal: "historico-admin", recebido: performance.now() };
+          this.openAt = Date.now();
+          void this.fire("historico-admin");
+        }
       } catch {} finally { this.msgPollBusy = false; }
     }, 1000);
     await new Promise((resolve) => { this.doneResolve = resolve; });
@@ -1164,6 +1177,8 @@ class Job {
     const t0 = Date.now();
     const p0 = performance.now();
     this.lastSendAt = t0;
+    // "escrita" é o nome legado do início da chamada RPC; não é uma
+    // medição do socket nem do instante de chegada ao servidor do Telegram.
     this.tl = { ...(this.tl ?? {}), motivo: reason, escrita: p0 };
     try {
       const res = await fastSend(this.acc.main, this.payload, { noUpdates: SEND_NO_UPDATES });

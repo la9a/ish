@@ -1,0 +1,59 @@
+ANALISAR O AGENTE MIAMI E VALIDAR UMA CORREÇÃO DE CONFIRMAÇÃO
+
+O operador utiliza o Lovable para administrar a VPS e não tem terminal local. Use o acesso já existente à VPS informada por ele. Não coloque senha, tokens, API Hash, sessões ou valores de ambiente em chat, arquivos de entrega, logs ou commits. Não solicite novamente credenciais que já funcionem no seu ambiente.
+
+Material preparado na branch codex/miami-confirmacao do repositório la9a/ish:
+https://github.com/la9a/ish/tree/codex/miami-confirmacao
+Pacote: releases/miami-confirmacao-review.zip
+Relatório: docs/MIAMI_ENVIO_AUDIT.md
+
+Este material NÃO foi aplicado à VPS. No ambiente que preparou a correção, o SSH retornou Connection refused antes da autenticação; o acesso HTTP ao host foi negado pela política de rede. A versão real e a causa do atraso ainda precisam ser verificadas por você. Não descreva essa preparação como uma medição ou otimização já implantada.
+
+1. INSPECIONE PRIMEIRO, SEM MODIFICAR O SERVIÇO
+
+Entre pela rota SSH normal já autorizada. Se o acesso falhar, informe o erro exato e interrompa a implantação. Não desative verificação de host/TLS nem abra serviços ou portas novos para contornar uma política de rede.
+
+Identifique o PID, gerenciador (PM2 ou systemd), diretório real, arquivo executado, versão de Node e mtcute e configuração atual. Leia somente os campos necessários; não imprima pm2 jlist, process.env, /proc/PID/environ ou arquivos de segredos na íntegra.
+
+Execute o coletor Python do pacote. Ele não faz chamadas ao Telegram nem lê sessões:
+python3 scripts/diagnose.py --output /tmp/senhabaixa-diagnostico.json
+
+Se necessário, informe o PID e o log real do serviço com --pid e --log. Use um novo nome de saída se o arquivo já existir. O coletor busca o caminho padrão do agente; para um diretório personalizado, forneça o PID. Falta de amostras/processo não comprova que o serviço está saudável ou parado.
+
+Examine especialmente as linhas sanitizadas linha-do-tempo/event-loop, origem do gatilho, sinal até chamada RPC, confirmação, FLOOD_WAIT e AUTH_KEY_DUPLICATED. Compare casos reais existentes, por conta/grupo/método, sem postar mensagens novas em grupos de visita ou no Autowax para testar aparência de números.
+
+2. COMPARE A VERSÃO ANTES DE APLICAR
+
+Veja MANIFEST.json. O código-base do repositório antes da correção tem SHA-256:
+31ec42a98f38b931aabc2b71c349430a7d1ac5b9b35e050b03fbfa13331cb5ec
+
+Se o arquivo da VPS tiver esse hash, server.patch pode ser verificado a partir da raiz do agente com git apply --check server.patch (ou ferramenta equivalente). Se a versão for diferente, compare as funções e adapte apenas os trechos necessários. Não substitua cegamente o arquivo inteiro por uma versão mais antiga e não descarte personalizações da VPS.
+
+A correção centraliza confirmSentUpdate nos dois modos, permite confirmação pela própria mensagem antes do ACK, remove logs de mensagens alheias antes do despacho, separa o cursor do polling da referência de confirmação e identifica mensagem-admin/historico-admin na telemetria. O texto, grupo, ID e prazo precisam continuar conferidos. RANDOM_ID_DUPLICATE sozinho continua sendo resultado incerto até existir um ID concreto. FLOOD_WAIT deve ser respeitado.
+
+Não acelere o número exibido alterando o cronômetro, antecipando sucesso sem prova ou confundindo início da chamada RPC com chegada ao Telegram. Não envie sondas para grupos fechados e não clone a sessão/authorization para criar uma segunda conexão de teste. O benchmark antigo bench-open.mjs não está no pacote de revisão e não deve ser executado em contas reais.
+
+3. VALIDE O CÓDIGO COM TRANSPORTE CONTROLADO
+
+A partir da raiz do agente de revisão, sem iniciar o serviço:
+node --check src/server.mjs
+node --test src/opening-update.test.mjs src/admin-update.test.mjs
+python3 -m unittest discover -s test -p 'test_*.py' -v
+
+Os testes leem a classe Job real e simulam a borda do transporte, sem conectar contas. Eles cobrem confirmação antes do ACK, duplicidade, mensagens de outro peer, concorrência, resposta atrasada do histórico e FLOOD_WAIT. Não reduza essas proteções para passar os testes.
+
+4. PREPARE IMPLANTAÇÃO E ROLLBACK
+
+Antes de alterar o serviço, guarde um backup do código atual e os hashes. Preserve dependências e lockfile da instalação real; não atualize mtcute ou Node por causa desta correção sem necessidade comprovada. Preserve DATA_DIR, AGENT_TOKEN, sessões, contas, credenciais e chaves existentes.
+
+Confirme que não há monitoramentos ativos ou janela de abertura em andamento antes de reiniciar. /health exige o token existente; use-o em memória sem expor valores ou cabeçalhos. A lista jobs pode incluir entradas encerradas, portanto não a interprete automaticamente como estado ativo. Se não conseguir confirmar uma condição segura, entregue o diagnóstico e a correção preparada sem interromper o monitoramento.
+
+Use o gerenciador já instalado. Evite reload em paralelo e não suba um segundo agente apontando para as mesmas sessões. Faça a troca somente com uma instância ativa e confirme a restauração das contas. Se houver falha, restaure o backup do código e reinicie somente esse serviço, preservando os dados.
+
+Confira /ping e o health autenticado após a troca. Depois acompanhe logs de uso normal para verificar se a mensagem própria confirma antes do ACK e se houve redução de trabalho antes do despacho. Não alegue melhora de senha sem comparar a posição efetiva em rodadas equivalentes.
+
+5. ENTREGUE EVIDÊNCIAS
+
+Informe hash da versão encontrada, diferenças relevantes, estado de implantação, resultado dos testes, medições existentes e qualquer bloqueio. Separe confirmação, início da chamada RPC, entrega do update e posição. O painel consulta logs a cada 700ms, além da rede; isso pode afetar o momento em que o resultado aparece na tela sem alterar um job já armado na VPS.
+
+Há uma investigação separada pendente sobre a apuração da senha: a versão do repositório conta mensagens no mesmo minuto e filtra administradores de forma diferente entre métodos. Confira a lógica da VPS contra a fila oficial antes de usar a senha exibida para comparar robôs.

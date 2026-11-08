@@ -1,5 +1,7 @@
 # Robô de Miami (agente de envio)
 
+A revisão de confirmação está documentada em [MIAMI_ENVIO_AUDIT.md](../docs/MIAMI_ENVIO_AUDIT.md). Ela foi validada localmente e ainda precisa ser comparada com a versão da VPS. O coletor `scripts/diagnose.py` e os testes em `src/*.test.mjs` não conectam contas nem enviam mensagens.
+
 Roda num servidor em Miami, mantém as contas conectadas 24h e dispara a mensagem
 de lá. A distância até o Telegram cai de ~200ms para ~5-15ms.
 
@@ -42,12 +44,12 @@ e `MIAMI_AGENT_TOKEN` (o mesmo `AGENT_TOKEN`).
 
 ## Rotas
 
-| Rota | Uso |
-| --- | --- |
-| `GET /health` | estado e latência de cada conta |
-| `POST /accounts` | registra conta: `{clientId, apiId, apiHash, session}` |
-| `POST /jobs` | inicia monitoramento: `{jobId, clientId, group, message, targetMs?}` |
-| `DELETE /jobs?jobId=` | para o monitoramento |
-| `GET /events?since=` | logs para o painel |
+| Rota                  | Uso                                                                  |
+| --------------------- | -------------------------------------------------------------------- |
+| `GET /health`         | estado e latência de cada conta                                      |
+| `POST /accounts`      | registra conta: `{clientId, apiId, apiHash, session}`                |
+| `POST /jobs`          | inicia monitoramento: `{jobId, clientId, group, message, targetMs?}` |
+| `DELETE /jobs?jobId=` | para o monitoramento                                                 |
+| `GET /events?since=`  | logs para o painel                                                   |
 
 Todas exigem `Authorization: Bearer <AGENT_TOKEN>`, menos `/health`.

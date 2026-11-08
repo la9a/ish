@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "node docs/auth-login.test.mjs && node tests/cache-isolation.test.mjs && node tests/clock-format.test.mjs && node tests/pending-position.test.mjs && node tests/wizard-recovery.test.mjs && node tests/client-edit.test.mjs && node tests/connection-order.test.mjs && node tests/client-preparation.test.mjs && node miami-agent/src/opening-update.test.mjs",
+    "test": "node docs/auth-login.test.mjs && node tests/cache-isolation.test.mjs && node tests/clock-format.test.mjs && node tests/pending-position.test.mjs && node tests/wizard-recovery.test.mjs && node tests/client-edit.test.mjs && node tests/connection-order.test.mjs && node tests/client-preparation.test.mjs && node miami-agent/src/opening-update.test.mjs && node miami-agent/src/admin-update.test.mjs",
     "package": "python3 scripts/package.py",
     "test:ui": "node scripts/visual-smoke.mjs"
   },
